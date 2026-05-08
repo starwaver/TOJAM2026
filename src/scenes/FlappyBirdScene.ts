@@ -1,18 +1,15 @@
 import Phaser from 'phaser';
+import { DEFAULT_CONFIG, FlappyConfig } from '../config';
 
 type PipePair = {
   top: Phaser.GameObjects.Rectangle;
   bottom: Phaser.GameObjects.Rectangle;
+  gapY: number;
   scored: boolean;
 };
 
 const BIRD_RADIUS = 18;
-const GRAVITY = 1450;
-const FLAP_VELOCITY = -480;
 const PIPE_WIDTH = 74;
-const PIPE_GAP = 168;
-const PIPE_SPACING = 285;
-const PIPE_SPEED = 220;
 const GROUND_HEIGHT = 68;
 
 export class FlappyBirdScene extends Phaser.Scene {
@@ -25,13 +22,22 @@ export class FlappyBirdScene extends Phaser.Scene {
   private hasStarted = false;
   private isGameOver = false;
   private idleBirdY = 0;
-  private scoreText?: Phaser.GameObjects.Text;
-  private promptText?: Phaser.GameObjects.Text;
   private ground?: Phaser.GameObjects.Rectangle;
-  private homeButton?: Phaser.GameObjects.Container;
+  private hudRoot?: HTMLDivElement;
+  private scoreValue?: HTMLDivElement;
+  private promptValue?: HTMLDivElement;
+  private cfg: FlappyConfig = { ...DEFAULT_CONFIG };
 
   constructor() {
     super('FlappyBirdScene');
+  }
+
+  init(data: { config?: FlappyConfig }) {
+    if (data.config) {
+      this.cfg = { ...DEFAULT_CONFIG, ...data.config };
+    } else {
+      this.cfg = { ...DEFAULT_CONFIG };
+    }
   }
 
   create() {
@@ -46,8 +52,8 @@ export class FlappyBirdScene extends Phaser.Scene {
 
     this.createBackdrop();
     this.createBird();
-    this.createHud();
-    this.createHomeButton();
+    this.createGround();
+    this.createHtmlUi();
 
     this.scale.on('resize', this.layout, this);
     this.input.on('pointerdown', this.flap, this);
@@ -73,12 +79,12 @@ export class FlappyBirdScene extends Phaser.Scene {
     }
 
     if (!this.isGameOver) {
-      this.birdVelocity += GRAVITY * dt;
+      this.birdVelocity += this.cfg.gravity * dt;
       this.bird.y += this.birdVelocity * dt;
       this.bird.rotation = Phaser.Math.Clamp(this.birdVelocity / 780, -0.5, 0.75);
 
       this.pipeTimer += dt * 1000;
-      if (this.pipeTimer >= PIPE_SPACING / PIPE_SPEED * 1000) {
+      if (this.pipeTimer >= this.cfg.pipeSpacing / this.cfg.pipeSpeed * 1000) {
         this.pipeTimer = 0;
         this.spawnPipe();
       }
@@ -122,46 +128,172 @@ export class FlappyBirdScene extends Phaser.Scene {
     this.birdWing = wing;
   }
 
-  private createHud() {
-    this.scoreText = this.add
-      .text(0, 0, '0', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '44px',
-        fontStyle: '700',
-        color: '#101820',
-        stroke: '#f8f5f0',
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5);
-
-    this.promptText = this.add
-      .text(0, 0, 'Click, tap, or press Space', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '18px',
-        color: '#f8f5f0',
-        backgroundColor: '#10182099',
-        padding: { x: 14, y: 8 },
-      })
-      .setOrigin(0.5);
-
+  private createGround() {
     this.ground = this.add.rectangle(0, 0, 0, GROUND_HEIGHT, 0x266150).setOrigin(0, 0);
   }
 
-  private createHomeButton() {
-    const bg = this.add.rectangle(0, 0, 112, 40, 0x101820, 0.86).setStrokeStyle(2, 0xf8f5f0, 0.35);
-    const label = this.add.text(0, 0, 'Home', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '16px',
-      fontStyle: '700',
-      color: '#f8f5f0',
+  private createHtmlUi() {
+    const app = document.querySelector<HTMLDivElement>('#app');
+    if (!app) {
+      return;
+    }
+
+    const root = document.createElement('div');
+    root.setAttribute('aria-label', 'Flappy Bird demo controls');
+    root.style.position = 'absolute';
+    root.style.inset = '0';
+    root.style.pointerEvents = 'none';
+    root.style.fontFamily = 'Arial, sans-serif';
+    root.style.color = '#f8f5f0';
+    root.style.userSelect = 'none';
+
+    const topBar = document.createElement('div');
+    topBar.style.position = 'absolute';
+    topBar.style.left = '14px';
+    topBar.style.right = '14px';
+    topBar.style.top = '14px';
+    topBar.style.display = 'grid';
+    topBar.style.gridTemplateColumns = 'auto 1fr auto';
+    topBar.style.alignItems = 'start';
+    topBar.style.gap = '16px';
+    topBar.style.pointerEvents = 'none';
+
+    const homeButton = document.createElement('button');
+    homeButton.type = 'button';
+    homeButton.textContent = 'Home';
+    this.applyButtonStyle(homeButton);
+    homeButton.addEventListener('click', () => this.scene.start('GameScene'));
+
+    const score = document.createElement('div');
+    score.textContent = '0';
+    score.style.justifySelf = 'center';
+    score.style.fontSize = '46px';
+    score.style.fontWeight = '800';
+    score.style.lineHeight = '1';
+    score.style.color = '#101820';
+    score.style.textShadow = '0 2px 0 #f8f5f0, 2px 0 0 #f8f5f0, -2px 0 0 #f8f5f0, 0 -2px 0 #f8f5f0';
+
+    const panel = document.createElement('section');
+    panel.style.width = 'min(280px, calc(100vw - 28px))';
+    panel.style.padding = '12px';
+    panel.style.border = '1px solid rgba(248, 245, 240, 0.3)';
+    panel.style.background = 'rgba(16, 24, 32, 0.86)';
+    panel.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.22)';
+    panel.style.pointerEvents = 'auto';
+
+    const panelTitle = document.createElement('div');
+    panelTitle.textContent = 'Tuning';
+    panelTitle.style.fontSize = '14px';
+    panelTitle.style.fontWeight = '800';
+    panelTitle.style.marginBottom = '8px';
+    panel.append(panelTitle);
+
+    const sliderDefs: {
+      key: keyof FlappyConfig;
+      label: string;
+      min: number;
+      max: number;
+      step: number;
+    }[] = [
+      { key: 'gravity', label: 'Gravity', min: 400, max: 3000, step: 50 },
+      { key: 'flapVelocity', label: 'Flap', min: 200, max: 900, step: 10 },
+      { key: 'pipeGap', label: 'Gap', min: 80, max: 300, step: 5 },
+      { key: 'pipeSpeed', label: 'Speed', min: 80, max: 500, step: 10 },
+      { key: 'pipeSpacing', label: 'Spacing', min: 150, max: 500, step: 5 },
+    ];
+
+    for (const def of sliderDefs) {
+      panel.append(this.createSlider(def));
+    }
+
+    const resetButton = document.createElement('button');
+    resetButton.type = 'button';
+    resetButton.textContent = 'Restart';
+    this.applyButtonStyle(resetButton);
+    resetButton.style.width = '100%';
+    resetButton.style.marginTop = '10px';
+    resetButton.addEventListener('click', () => this.restartRun());
+    panel.append(resetButton);
+
+    const prompt = document.createElement('div');
+    prompt.textContent = 'Click, tap, or press Space';
+    prompt.style.position = 'absolute';
+    prompt.style.left = '50%';
+    prompt.style.bottom = `${GROUND_HEIGHT + 18}px`;
+    prompt.style.transform = 'translateX(-50%)';
+    prompt.style.maxWidth = 'calc(100vw - 32px)';
+    prompt.style.padding = '8px 14px';
+    prompt.style.background = 'rgba(16, 24, 32, 0.72)';
+    prompt.style.fontSize = '18px';
+    prompt.style.fontWeight = '700';
+    prompt.style.textAlign = 'center';
+    prompt.style.pointerEvents = 'none';
+
+    topBar.append(homeButton, score, panel);
+    root.append(topBar, prompt);
+
+    root.addEventListener('pointerdown', (event) => event.stopPropagation());
+    root.addEventListener('click', (event) => event.stopPropagation());
+    root.addEventListener('keydown', (event) => event.stopPropagation());
+
+    app.append(root);
+    this.hudRoot = root;
+    this.scoreValue = score;
+    this.promptValue = prompt;
+  }
+
+  private createSlider(def: {
+    key: keyof FlappyConfig;
+    label: string;
+    min: number;
+    max: number;
+    step: number;
+  }) {
+    const row = document.createElement('label');
+    row.style.display = 'grid';
+    row.style.gridTemplateColumns = '1fr auto';
+    row.style.gap = '6px 10px';
+    row.style.alignItems = 'center';
+    row.style.marginTop = '8px';
+    row.style.fontSize = '13px';
+    row.style.color = '#d6ede8';
+
+    const label = document.createElement('span');
+    label.textContent = def.label;
+
+    const value = document.createElement('output');
+    value.textContent = `${this.cfg[def.key]}`;
+    value.style.fontWeight = '800';
+    value.style.color = '#f8f5f0';
+
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = `${def.min}`;
+    input.max = `${def.max}`;
+    input.step = `${def.step}`;
+    input.value = `${this.cfg[def.key]}`;
+    input.style.gridColumn = '1 / -1';
+    input.style.width = '100%';
+    input.addEventListener('input', () => {
+      const nextValue = Number(input.value);
+      this.cfg[def.key] = nextValue;
+      value.textContent = `${nextValue}`;
+      this.resizeExistingPipes();
     });
 
-    label.setOrigin(0.5);
-    bg.setInteractive({ useHandCursor: true });
-    bg.on('pointerdown', () => this.scene.start('GameScene'));
+    row.append(label, value, input);
+    return row;
+  }
 
-    this.homeButton = this.add.container(0, 0, [bg, label]);
-    this.homeButton.setDepth(10);
+  private applyButtonStyle(button: HTMLButtonElement) {
+    button.style.minHeight = '40px';
+    button.style.padding = '0 16px';
+    button.style.border = '1px solid rgba(248, 245, 240, 0.36)';
+    button.style.background = 'rgba(16, 24, 32, 0.88)';
+    button.style.color = '#f8f5f0';
+    button.style.font = '700 15px Arial, sans-serif';
+    button.style.cursor = 'pointer';
+    button.style.pointerEvents = 'auto';
   }
 
   private layout(gameSize: Phaser.Structs.Size) {
@@ -170,14 +302,9 @@ export class FlappyBirdScene extends Phaser.Scene {
 
     this.idleBirdY = playHeight * 0.45;
     this.bird?.setPosition(Math.max(120, width * 0.28), this.idleBirdY);
-    this.scoreText?.setPosition(width / 2, 44);
-    this.promptText?.setPosition(width / 2, height - GROUND_HEIGHT - 34);
     this.ground?.setPosition(0, height - GROUND_HEIGHT).setSize(width, GROUND_HEIGHT);
-    this.homeButton?.setPosition(70, 42);
 
-    for (const pipe of this.pipes) {
-      this.sizePipePair(pipe);
-    }
+    this.resizeExistingPipes();
   }
 
   private flap() {
@@ -191,7 +318,7 @@ export class FlappyBirdScene extends Phaser.Scene {
     }
 
     this.hasStarted = true;
-    this.birdVelocity = FLAP_VELOCITY;
+    this.birdVelocity = -this.cfg.flapVelocity;
     this.birdWing?.setAngle(-24);
     this.tweens.add({
       targets: this.birdWing,
@@ -199,7 +326,7 @@ export class FlappyBirdScene extends Phaser.Scene {
       duration: 140,
       ease: 'Sine.easeOut',
     });
-    this.promptText?.setVisible(false);
+    this.setPromptVisible(false);
   }
 
   private spawnPipe() {
@@ -207,24 +334,23 @@ export class FlappyBirdScene extends Phaser.Scene {
     const playHeight = height - GROUND_HEIGHT;
     const safeTop = 96;
     const safeBottom = Math.max(safeTop + 1, playHeight - 92);
-    const gapY = Phaser.Math.Between(safeTop + PIPE_GAP / 2, safeBottom - PIPE_GAP / 2);
+    const gapY = Phaser.Math.Between(safeTop + this.cfg.pipeGap / 2, safeBottom - this.cfg.pipeGap / 2);
 
     const top = this.add.rectangle(width + PIPE_WIDTH, 0, PIPE_WIDTH, 100, 0x1f9d55).setOrigin(0.5, 0);
     const bottom = this.add.rectangle(width + PIPE_WIDTH, 0, PIPE_WIDTH, 100, 0x1f9d55).setOrigin(0.5, 0);
     top.setStrokeStyle(4, 0x13783d);
     bottom.setStrokeStyle(4, 0x13783d);
 
-    const pipe = { top, bottom, scored: false };
+    const pipe = { top, bottom, gapY, scored: false };
     this.pipes.push(pipe);
-    this.sizePipePair(pipe, gapY);
+    this.sizePipePair(pipe);
   }
 
-  private sizePipePair(pipe: PipePair, gapY?: number) {
+  private sizePipePair(pipe: PipePair) {
     const { height } = this.scale.gameSize;
     const playHeight = height - GROUND_HEIGHT;
-    const currentGapCenter = gapY ?? pipe.top.displayHeight + PIPE_GAP / 2;
-    const topHeight = Math.max(20, currentGapCenter - PIPE_GAP / 2);
-    const bottomY = currentGapCenter + PIPE_GAP / 2;
+    const topHeight = Math.max(20, pipe.gapY - this.cfg.pipeGap / 2);
+    const bottomY = pipe.gapY + this.cfg.pipeGap / 2;
     const bottomHeight = Math.max(20, playHeight - bottomY);
 
     pipe.top.setSize(PIPE_WIDTH, topHeight).setDisplaySize(PIPE_WIDTH, topHeight);
@@ -232,10 +358,16 @@ export class FlappyBirdScene extends Phaser.Scene {
     pipe.bottom.setSize(PIPE_WIDTH, bottomHeight).setDisplaySize(PIPE_WIDTH, bottomHeight);
   }
 
+  private resizeExistingPipes() {
+    for (const pipe of this.pipes) {
+      this.sizePipePair(pipe);
+    }
+  }
+
   private movePipes(dt: number) {
     for (const pipe of this.pipes) {
       if (!this.isGameOver) {
-        pipe.top.x -= PIPE_SPEED * dt;
+        pipe.top.x -= this.cfg.pipeSpeed * dt;
         pipe.bottom.x = pipe.top.x;
       }
     }
@@ -257,7 +389,7 @@ export class FlappyBirdScene extends Phaser.Scene {
       if (!pipe.scored && pipe.top.x + PIPE_WIDTH / 2 < this.bird.x) {
         pipe.scored = true;
         this.score += 1;
-        this.scoreText?.setText(`${this.score}`);
+        this.updateScore();
       }
     }
   }
@@ -290,10 +422,8 @@ export class FlappyBirdScene extends Phaser.Scene {
 
   private endRun() {
     this.isGameOver = true;
-    this.promptText
-      ?.setText('Game over - click or press Space to retry')
-      .setVisible(true)
-      .setPosition(this.scale.width / 2, this.scale.height - GROUND_HEIGHT - 34);
+    this.setPromptText('Game over - click or press Space to retry');
+    this.setPromptVisible(true);
   }
 
   private restartRun() {
@@ -308,13 +438,31 @@ export class FlappyBirdScene extends Phaser.Scene {
     this.pipes = [];
     this.score = 0;
     this.pipeTimer = 0;
-    this.birdVelocity = FLAP_VELOCITY;
+    this.birdVelocity = -this.cfg.flapVelocity;
     this.hasStarted = true;
     this.isGameOver = false;
-    this.scoreText?.setText('0');
-    this.promptText?.setVisible(false);
+    this.updateScore();
+    this.setPromptVisible(false);
     this.bird?.setPosition(Math.max(120, width * 0.28), playHeight * 0.45).setRotation(0);
     this.spawnPipe();
+  }
+
+  private updateScore() {
+    if (this.scoreValue) {
+      this.scoreValue.textContent = `${this.score}`;
+    }
+  }
+
+  private setPromptText(text: string) {
+    if (this.promptValue) {
+      this.promptValue.textContent = text;
+    }
+  }
+
+  private setPromptVisible(visible: boolean) {
+    if (this.promptValue) {
+      this.promptValue.style.display = visible ? 'block' : 'none';
+    }
   }
 
   private cleanup() {
@@ -322,5 +470,9 @@ export class FlappyBirdScene extends Phaser.Scene {
     this.input.off('pointerdown', this.flap, this);
     this.input.keyboard?.off('keydown-SPACE', this.flap, this);
     this.input.keyboard?.off('keydown-UP', this.flap, this);
+    this.hudRoot?.remove();
+    this.hudRoot = undefined;
+    this.scoreValue = undefined;
+    this.promptValue = undefined;
   }
 }
