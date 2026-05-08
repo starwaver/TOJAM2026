@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import './style.css';
 import { GameScene } from './scenes/GameScene';
+import { FlappyBirdScene } from './scenes/FlappyBirdScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -18,7 +19,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [GameScene],
+  scene: [GameScene, FlappyBirdScene],
 };
 
 new Phaser.Game(config);
