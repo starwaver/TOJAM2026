@@ -17,13 +17,14 @@ const GROUND_HEIGHT = 68;
 
 export class FlappyBirdScene extends Phaser.Scene {
   private bird?: Phaser.GameObjects.Container;
-  private birdBody?: Phaser.GameObjects.Arc;
   private birdWing?: Phaser.GameObjects.Triangle;
   private pipes: PipePair[] = [];
   private pipeTimer = 0;
   private birdVelocity = 0;
   private score = 0;
+  private hasStarted = false;
   private isGameOver = false;
+  private idleBirdY = 0;
   private scoreText?: Phaser.GameObjects.Text;
   private promptText?: Phaser.GameObjects.Text;
   private ground?: Phaser.GameObjects.Rectangle;
@@ -40,6 +41,7 @@ export class FlappyBirdScene extends Phaser.Scene {
     this.pipeTimer = 0;
     this.birdVelocity = 0;
     this.score = 0;
+    this.hasStarted = false;
     this.isGameOver = false;
 
     this.createBackdrop();
@@ -57,10 +59,16 @@ export class FlappyBirdScene extends Phaser.Scene {
     this.spawnPipe();
   }
 
-  update(_time: number, delta: number) {
-    const dt = delta / 1000;
+  update(time: number, delta: number) {
+    const dt = Math.min(delta / 1000, 1 / 30);
 
     if (!this.bird) {
+      return;
+    }
+
+    if (!this.isGameOver && !this.hasStarted) {
+      this.bird.y = this.idleBirdY + Math.sin(time / 220) * 5;
+      this.bird.rotation = Math.sin(time / 320) * 0.06;
       return;
     }
 
@@ -69,7 +77,7 @@ export class FlappyBirdScene extends Phaser.Scene {
       this.bird.y += this.birdVelocity * dt;
       this.bird.rotation = Phaser.Math.Clamp(this.birdVelocity / 780, -0.5, 0.75);
 
-      this.pipeTimer += delta;
+      this.pipeTimer += dt * 1000;
       if (this.pipeTimer >= PIPE_SPACING / PIPE_SPEED * 1000) {
         this.pipeTimer = 0;
         this.spawnPipe();
@@ -111,7 +119,6 @@ export class FlappyBirdScene extends Phaser.Scene {
     const beak = this.add.triangle(18, 0, 0, -6, 18, 0, 0, 6, 0xf25f5c);
 
     this.bird = this.add.container(0, 0, [body, wing, eye, beak]);
-    this.birdBody = body;
     this.birdWing = wing;
   }
 
@@ -161,7 +168,8 @@ export class FlappyBirdScene extends Phaser.Scene {
     const { width, height } = gameSize;
     const playHeight = height - GROUND_HEIGHT;
 
-    this.bird?.setPosition(Math.max(120, width * 0.28), playHeight * 0.45);
+    this.idleBirdY = playHeight * 0.45;
+    this.bird?.setPosition(Math.max(120, width * 0.28), this.idleBirdY);
     this.scoreText?.setPosition(width / 2, 44);
     this.promptText?.setPosition(width / 2, height - GROUND_HEIGHT - 34);
     this.ground?.setPosition(0, height - GROUND_HEIGHT).setSize(width, GROUND_HEIGHT);
@@ -182,6 +190,7 @@ export class FlappyBirdScene extends Phaser.Scene {
       return;
     }
 
+    this.hasStarted = true;
     this.birdVelocity = FLAP_VELOCITY;
     this.birdWing?.setAngle(-24);
     this.tweens.add({
@@ -254,13 +263,17 @@ export class FlappyBirdScene extends Phaser.Scene {
   }
 
   private checkCollision() {
-    if (!this.bird || !this.birdBody || this.isGameOver) {
+    if (!this.bird || this.isGameOver) {
       return;
     }
 
     const { height } = this.scale.gameSize;
-    const birdBounds = this.birdBody.getBounds();
-    Phaser.Geom.Rectangle.Offset(birdBounds, this.bird.x, this.bird.y);
+    const birdBounds = new Phaser.Geom.Rectangle(
+      this.bird.x - BIRD_RADIUS,
+      this.bird.y - BIRD_RADIUS,
+      BIRD_RADIUS * 2,
+      BIRD_RADIUS * 2,
+    );
 
     const hitWorld = this.bird.y - BIRD_RADIUS < 0 || this.bird.y + BIRD_RADIUS > height - GROUND_HEIGHT;
     const hitPipe = this.pipes.some((pipe) => {
@@ -296,6 +309,7 @@ export class FlappyBirdScene extends Phaser.Scene {
     this.score = 0;
     this.pipeTimer = 0;
     this.birdVelocity = FLAP_VELOCITY;
+    this.hasStarted = true;
     this.isGameOver = false;
     this.scoreText?.setText('0');
     this.promptText?.setVisible(false);
