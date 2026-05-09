@@ -45,7 +45,7 @@ export class BossFightScene extends Phaser.Scene {
     ScoreSystem.applyBossFightScore(state, 0);
     GameState.clampVitals();
 
-    SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.workday });
+    SceneTransitionService.start(this, { kind: 'timed', target: SceneKeys.workday, durationMs: 200 });
   }
 
   private createButton(label: string, x: number, y: number, onClick: () => void): void {
