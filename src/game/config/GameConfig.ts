@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { BossFightScene } from '../scenes/BossFightScene';
 import { BootScene } from '../scenes/BootScene';
 import { GameOverScene } from '../scenes/GameOverScene';
 import { MainMenuScene } from '../scenes/MainMenuScene';
@@ -24,5 +25,15 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, PreloadScene, MainMenuScene, WorkdayScene, TaskIntroScene, ResultsScene, GameOverScene, FlappyBirdScene],
+  scene: [
+    BootScene,
+    PreloadScene,
+    MainMenuScene,
+    WorkdayScene,
+    TaskIntroScene,
+    BossFightScene,
+    ResultsScene,
+    GameOverScene,
+    FlappyBirdScene,
+  ],
 };
