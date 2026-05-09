@@ -30,6 +30,7 @@ export class FlappyBirdScene extends BaseMiniGameScene {
   private scoreValue?: HTMLDivElement;
   private promptValue?: HTMLDivElement;
   private cfg: FlappyConfig = { ...DEFAULT_CONFIG };
+  private inputArmed = true;
 
   constructor() {
     super(SceneKeys.flappyBird);
@@ -54,6 +55,7 @@ export class FlappyBirdScene extends BaseMiniGameScene {
     this.score = 0;
     this.hasStarted = false;
     this.isGameOver = false;
+    this.inputArmed = this.mode === 'standalone';
 
     this.createBackdrop();
     this.createBird();
@@ -71,6 +73,9 @@ export class FlappyBirdScene extends BaseMiniGameScene {
 
     if (this.mode === 'workday') {
       this.startTaskTimer();
+      this.time.delayedCall(800, () => {
+        this.inputArmed = true;
+      });
     }
   }
 
@@ -78,6 +83,10 @@ export class FlappyBirdScene extends BaseMiniGameScene {
     const dt = Math.min(delta / 1000, 1 / 30);
 
     if (!this.bird) {
+      return;
+    }
+
+    if (!this.inputArmed) {
       return;
     }
 
