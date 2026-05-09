@@ -21,12 +21,21 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
     this.completed = false;
   }
 
-  protected startTaskTimer(onExpired?: () => void): void {
+  protected prepareTaskHud(): void {
     if (!this.taskConfig) {
       return;
     }
 
-    this.taskTimer?.remove();
+    this.ensureWorkdayHud();
+    this.refreshHud();
+  }
+
+  protected startTaskTimer(onExpired?: () => void): void {
+    if (!this.taskConfig || this.taskTimer) {
+      return;
+    }
+
+    this.ensureWorkdayHud();
     this.taskTimer = this.time.delayedCall(this.taskConfig.actualTimeLimit * 1000, () => {
       onExpired?.();
 
@@ -35,22 +44,18 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
       }
     });
 
-    if (this.mode === 'workday') {
-      this.workdayHud = new WorkdayHUD(this.taskConfig);
-      this.workdayHud.mount();
-      this.refreshHud();
-      this.hudRefreshTimer = this.time.addEvent({
-        delay: 100,
-        loop: true,
-        callback: this.refreshHud,
-        callbackScope: this,
-      });
+    if (this.mode === 'workday' && !this.hudRefreshTimer) {
+      this.startHudRefresh();
     }
   }
 
   protected getTaskTimeRemaining(): number {
-    if (!this.taskConfig || !this.taskTimer) {
+    if (!this.taskConfig) {
       return 0;
+    }
+
+    if (!this.taskTimer) {
+      return this.taskConfig.actualTimeLimit;
     }
 
     return Math.max(0, this.taskTimer.getRemainingSeconds());
@@ -98,5 +103,28 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
 
   private refreshHud(): void {
     this.workdayHud?.update(GameState.data, this.getTaskTimeRemaining());
+  }
+
+  private ensureWorkdayHud(): void {
+    if (this.mode !== 'workday' || !this.taskConfig || this.workdayHud) {
+      return;
+    }
+
+    this.workdayHud = new WorkdayHUD(this.taskConfig);
+    this.workdayHud.mount();
+    this.startHudRefresh();
+  }
+
+  private startHudRefresh(): void {
+    if (this.hudRefreshTimer) {
+      return;
+    }
+
+    this.hudRefreshTimer = this.time.addEvent({
+      delay: 100,
+      loop: true,
+      callback: this.refreshHud,
+      callbackScope: this,
+    });
   }
 }

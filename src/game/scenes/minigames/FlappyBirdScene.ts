@@ -72,7 +72,7 @@ export class FlappyBirdScene extends BaseMiniGameScene {
     this.spawnPipe();
 
     if (this.mode === 'workday') {
-      this.startTaskTimer();
+      this.prepareTaskHud();
       this.time.delayedCall(300, () => {
         this.inputArmed = true;
       });
@@ -333,6 +333,10 @@ export class FlappyBirdScene extends BaseMiniGameScene {
     if (this.isGameOver) {
       this.restartRun();
       return;
+    }
+
+    if (this.mode === 'workday' && !this.hasStarted) {
+      this.startTaskTimer();
     }
 
     this.hasStarted = true;
