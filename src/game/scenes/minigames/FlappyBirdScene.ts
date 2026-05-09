@@ -30,7 +30,8 @@ export class FlappyBirdScene extends BaseMiniGameScene {
   private scoreValue?: HTMLDivElement;
   private promptValue?: HTMLDivElement;
   private cfg: FlappyConfig = { ...DEFAULT_CONFIG };
-  private inputArmed = true;
+  private keyboardInputArmed = true;
+  private pointerInputArmed = true;
 
   constructor() {
     super(SceneKeys.flappyBird);
@@ -55,7 +56,8 @@ export class FlappyBirdScene extends BaseMiniGameScene {
     this.score = 0;
     this.hasStarted = false;
     this.isGameOver = false;
-    this.inputArmed = this.mode === 'standalone';
+    this.keyboardInputArmed = this.mode === 'standalone';
+    this.pointerInputArmed = this.mode === 'standalone';
 
     this.createBackdrop();
     this.createBird();
@@ -63,9 +65,9 @@ export class FlappyBirdScene extends BaseMiniGameScene {
     this.createHtmlUi();
 
     this.scale.on('resize', this.layout, this);
-    this.input.on('pointerdown', this.flap, this);
-    this.input.keyboard?.on('keydown-SPACE', this.flap, this);
-    this.input.keyboard?.on('keydown-UP', this.flap, this);
+    this.input.on('pointerdown', this.flapFromPointer, this);
+    this.input.keyboard?.on('keydown-SPACE', this.flapFromKeyboard, this);
+    this.input.keyboard?.on('keydown-UP', this.flapFromKeyboard, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
 
     this.layout(this.scale.gameSize);
@@ -74,7 +76,10 @@ export class FlappyBirdScene extends BaseMiniGameScene {
     if (this.mode === 'workday') {
       this.prepareTaskHud();
       this.time.delayedCall(300, () => {
-        this.inputArmed = true;
+        this.keyboardInputArmed = true;
+      });
+      this.time.delayedCall(1000, () => {
+        this.pointerInputArmed = true;
       });
     }
   }
@@ -83,10 +88,6 @@ export class FlappyBirdScene extends BaseMiniGameScene {
     const dt = Math.min(delta / 1000, 1 / 30);
 
     if (!this.bird) {
-      return;
-    }
-
-    if (!this.inputArmed) {
       return;
     }
 
@@ -325,6 +326,22 @@ export class FlappyBirdScene extends BaseMiniGameScene {
     this.resizeExistingPipes();
   }
 
+  private flapFromKeyboard() {
+    if (!this.keyboardInputArmed) {
+      return;
+    }
+
+    this.flap();
+  }
+
+  private flapFromPointer() {
+    if (!this.pointerInputArmed) {
+      return;
+    }
+
+    this.flap();
+  }
+
   private flap() {
     if (!this.bird) {
       return;
@@ -498,9 +515,9 @@ export class FlappyBirdScene extends BaseMiniGameScene {
 
   private cleanup() {
     this.scale.off('resize', this.layout, this);
-    this.input.off('pointerdown', this.flap, this);
-    this.input.keyboard?.off('keydown-SPACE', this.flap, this);
-    this.input.keyboard?.off('keydown-UP', this.flap, this);
+    this.input.off('pointerdown', this.flapFromPointer, this);
+    this.input.keyboard?.off('keydown-SPACE', this.flapFromKeyboard, this);
+    this.input.keyboard?.off('keydown-UP', this.flapFromKeyboard, this);
     this.cleanupMiniGame();
     this.hudRoot?.remove();
     this.hudRoot = undefined;
