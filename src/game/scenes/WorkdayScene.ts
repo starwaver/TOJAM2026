@@ -6,9 +6,9 @@ import { DifficultySystem } from '../systems/DifficultySystem';
 import { RageSystem } from '../systems/RageSystem';
 import { SanitySystem } from '../systems/SanitySystem';
 import { ScoreSystem } from '../systems/ScoreSystem';
-import { taskDirector } from '../systems/TaskDirector';
+import { TaskRegistry } from '../data/TaskRegistry';
 import { SceneKeys } from '../types/SceneKeys';
-import type { TaskConfig, TaskResult, WorkdaySceneData } from '../types/TaskTypes';
+import type { TaskConfig, TaskDefinition, TaskResult, WorkdaySceneData } from '../types/TaskTypes';
 
 export class WorkdayScene extends Phaser.Scene {
   private taskResult?: TaskResult;
@@ -44,7 +44,7 @@ export class WorkdayScene extends Phaser.Scene {
       0,
       BalanceConfig.dayCompleteProgress,
     );
-    state.difficultyLevel = DifficultySystem.getDifficulty(state.completedTasks);
+    state.difficultyLevel = DifficultySystem.getDifficulty(state.completedTasks + state.failedTasks);
     GameState.setCurrentTask(null);
     GameState.clampVitals();
   }
@@ -67,13 +67,128 @@ export class WorkdayScene extends Phaser.Scene {
       return;
     }
 
-    this.startNextTask();
+    this.showTaskSelection();
   }
 
-  private startNextTask(): void {
+  private showTaskSelection(): void {
     const state = GameState.data;
-    const difficulty = DifficultySystem.getDifficulty(state.completedTasks);
-    const task = taskDirector.getNextTask(difficulty);
+    const difficulty = DifficultySystem.getDifficulty(state.completedTasks + state.failedTasks);
+    const cx = this.scale.width / 2;
+
+    // ── Title ──
+    this.add
+      .text(cx, 52, "BOSS'S TASKS", {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '32px',
+        fontStyle: '700',
+        color: '#f2c14e',
+      })
+      .setOrigin(0.5);
+
+    // ── Day progress ──
+    this.add
+      .text(cx, 88, `Day Progress: ${Math.round(state.dayProgress)}%`, {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '16px',
+        color: '#9ed8db',
+      })
+      .setOrigin(0.5);
+
+    // ── Vitals meters ──
+    const meterWidth = 220;
+    const meterHeight = 18;
+    const meterX = cx - meterWidth / 2;
+
+    // Sanity
+    const sanityY = 128;
+    this.add.text(meterX, sanityY - 20, `Sanity: ${Math.round(state.sanity)}/${BalanceConfig.maxSanity}`, {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '14px',
+      fontStyle: '700',
+      color: '#4ecdc4',
+    });
+
+    this.add.rectangle(meterX, sanityY, meterWidth, meterHeight, 0x2a3a4a).setOrigin(0, 0.5);
+    const sanityFillW = Math.max(0, (state.sanity / BalanceConfig.maxSanity) * meterWidth);
+    this.add.rectangle(meterX, sanityY, sanityFillW, meterHeight, 0x4ecdc4).setOrigin(0, 0.5);
+
+    // Rage
+    const rageY = sanityY + 44;
+    this.add.text(meterX, rageY - 20, `Rage: ${Math.round(state.rage)}/${BalanceConfig.maxRage}`, {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '14px',
+      fontStyle: '700',
+      color: '#e74c3c',
+    });
+
+    this.add.rectangle(meterX, rageY, meterWidth, meterHeight, 0x2a3a4a).setOrigin(0, 0.5);
+    const rageFillW = Math.max(0, (state.rage / BalanceConfig.maxRage) * meterWidth);
+    this.add.rectangle(meterX, rageY, rageFillW, meterHeight, 0xe74c3c).setOrigin(0, 0.5);
+
+    // ── Task list ──
+    const eligibleTasks = TaskRegistry.filter(
+      (task) => difficulty >= task.minDifficulty && difficulty <= task.maxDifficulty,
+    );
+
+    const startY = rageY + 64;
+    const buttonSpacing = 72;
+
+    if (eligibleTasks.length === 0) {
+      this.add
+        .text(cx, startY, 'No tasks available!', {
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '18px',
+          color: '#f8f5f0',
+        })
+        .setOrigin(0.5);
+      return;
+    }
+
+    eligibleTasks.forEach((task, index) => {
+      const y = startY + index * buttonSpacing;
+      this.createTaskButton(task, cx, y, difficulty);
+    });
+  }
+
+  private createTaskButton(task: TaskDefinition, x: number, y: number, difficulty: number): void {
+    const state = GameState.data;
+    const buttonWidth = 320;
+    const buttonHeight = 58;
+
+    const bg = this.add
+      .rectangle(x, y, buttonWidth, buttonHeight, 0x2a3a4a)
+      .setStrokeStyle(2, 0xf2c14e)
+      .setInteractive({ useHandCursor: true });
+
+    const label = this.add
+      .text(x, y - 10, task.displayName, {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '18px',
+        fontStyle: '700',
+        color: '#f8f5f0',
+      })
+      .setOrigin(0.5);
+
+    const timeLimit = SanitySystem.getActualTimeLimit(task.baseTimeLimit, state.sanity);
+    const subLabel = this.add
+      .text(x, y + 14, `Time: ${timeLimit.toFixed(1)}s  |  Difficulty: ${difficulty}`, {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '12px',
+        color: '#9ed8db',
+      })
+      .setOrigin(0.5);
+
+    this.add.container(0, 0, [bg, label, subLabel]);
+
+    bg.on('pointerdown', () => {
+      this.selectTask(task, difficulty);
+    });
+    bg.on('pointerover', () => bg.setFillStyle(0x3a4a5a));
+    bg.on('pointerout', () => bg.setFillStyle(0x2a3a4a));
+  }
+
+  private selectTask(task: TaskDefinition, difficulty: number): void {
+    const state = GameState.data;
     const taskConfig: TaskConfig = {
       id: task.id,
       displayName: task.displayName,

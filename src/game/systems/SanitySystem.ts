@@ -13,12 +13,22 @@ export class SanitySystem {
     return baseTimeLimit * this.getTimeMultiplier(sanity);
   }
 
-  static getSanityLoss(result: TaskResult): number {
+  /** Sanity loss on success: scales with time remaining (more time left = less panic = less loss). */
+  static getSuccessSanityLoss(result: TaskResult): number {
     return BalanceConfig.baseSanityLoss + BalanceConfig.panicSanityLoss * (1 - result.timeRemainingRatio);
   }
 
+  /** Sanity loss on failure: large flat penalty regardless of time. */
+  static getFailSanityLoss(): number {
+    return BalanceConfig.failSanityLoss;
+  }
+
   static applyTaskResult(state: GameStateData, result: TaskResult): void {
-    state.sanity -= this.getSanityLoss(result);
+    if (result.success) {
+      state.sanity -= this.getSuccessSanityLoss(result);
+    } else {
+      state.sanity -= this.getFailSanityLoss();
+    }
     state.sanity = Phaser.Math.Clamp(state.sanity, 0, BalanceConfig.maxSanity);
   }
 
