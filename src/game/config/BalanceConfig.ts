@@ -1,0 +1,18 @@
+export const BalanceConfig = {
+  maxSanity: 100,
+  maxRage: 100,
+  minTimeMultiplier: 0.35,
+  maxTimeMultiplier: 1,
+  baseSanityLoss: 3,
+  panicSanityLoss: 12,
+  failRageGain: 25,
+  successRageGain: 0,
+  lowSanityRageFactor: 0.1,
+  bossFightDuration: 12,
+  bossFightSanityRestore: 20,
+  maxSanityRestoreFromBoss: 50,
+  dayProgressPerTask: 10,
+  dayCompleteProgress: 100,
+  difficultyStepTasks: 3,
+  maxDifficulty: 10,
+} as const;
