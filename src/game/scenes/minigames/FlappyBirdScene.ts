@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
-import { DEFAULT_CONFIG, FlappyConfig } from '../config';
+import { DEFAULT_CONFIG, FlappyConfig } from '../../../config';
+import { SceneKeys } from '../../types/SceneKeys';
+import type { MiniGameSceneData } from '../../types/TaskTypes';
+import { BaseMiniGameScene } from './BaseMiniGameScene';
 
 type PipePair = {
   top: Phaser.GameObjects.Rectangle;
@@ -12,7 +15,7 @@ const BIRD_RADIUS = 18;
 const PIPE_WIDTH = 74;
 const GROUND_HEIGHT = 68;
 
-export class FlappyBirdScene extends Phaser.Scene {
+export class FlappyBirdScene extends BaseMiniGameScene {
   private bird?: Phaser.GameObjects.Container;
   private birdWing?: Phaser.GameObjects.Triangle;
   private pipes: PipePair[] = [];
@@ -27,12 +30,16 @@ export class FlappyBirdScene extends Phaser.Scene {
   private scoreValue?: HTMLDivElement;
   private promptValue?: HTMLDivElement;
   private cfg: FlappyConfig = { ...DEFAULT_CONFIG };
+  private keyboardInputArmed = true;
+  private pointerInputArmed = true;
 
   constructor() {
-    super('FlappyBirdScene');
+    super(SceneKeys.flappyBird);
   }
 
-  init(data: { config?: FlappyConfig }) {
+  init(data: (MiniGameSceneData & { config?: FlappyConfig }) = {}) {
+    super.init(data);
+
     if (data.config) {
       this.cfg = { ...DEFAULT_CONFIG, ...data.config };
     } else {
@@ -49,6 +56,8 @@ export class FlappyBirdScene extends Phaser.Scene {
     this.score = 0;
     this.hasStarted = false;
     this.isGameOver = false;
+    this.keyboardInputArmed = this.mode === 'standalone';
+    this.pointerInputArmed = this.mode === 'standalone';
 
     this.createBackdrop();
     this.createBird();
@@ -56,13 +65,23 @@ export class FlappyBirdScene extends Phaser.Scene {
     this.createHtmlUi();
 
     this.scale.on('resize', this.layout, this);
-    this.input.on('pointerdown', this.flap, this);
-    this.input.keyboard?.on('keydown-SPACE', this.flap, this);
-    this.input.keyboard?.on('keydown-UP', this.flap, this);
+    this.input.on('pointerdown', this.flapFromPointer, this);
+    this.input.keyboard?.on('keydown-SPACE', this.flapFromKeyboard, this);
+    this.input.keyboard?.on('keydown-UP', this.flapFromKeyboard, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
 
     this.layout(this.scale.gameSize);
     this.spawnPipe();
+
+    if (this.mode === 'workday') {
+      this.prepareTaskHud();
+      this.time.delayedCall(1000, () => {
+        this.keyboardInputArmed = true;
+      });
+      this.time.delayedCall(1000, () => {
+        this.pointerInputArmed = true;
+      });
+    }
   }
 
   update(time: number, delta: number) {
@@ -162,7 +181,7 @@ export class FlappyBirdScene extends Phaser.Scene {
     homeButton.type = 'button';
     homeButton.textContent = 'Home';
     this.applyButtonStyle(homeButton);
-    homeButton.addEventListener('click', () => this.scene.start('GameScene'));
+    homeButton.addEventListener('click', () => this.scene.start(SceneKeys.mainMenu));
 
     const score = document.createElement('div');
     score.textContent = '0';
@@ -307,6 +326,22 @@ export class FlappyBirdScene extends Phaser.Scene {
     this.resizeExistingPipes();
   }
 
+  private flapFromKeyboard() {
+    if (!this.keyboardInputArmed) {
+      return;
+    }
+
+    this.flap();
+  }
+
+  private flapFromPointer() {
+    if (!this.pointerInputArmed) {
+      return;
+    }
+
+    this.flap();
+  }
+
   private flap() {
     if (!this.bird) {
       return;
@@ -315,6 +350,10 @@ export class FlappyBirdScene extends Phaser.Scene {
     if (this.isGameOver) {
       this.restartRun();
       return;
+    }
+
+    if (this.mode === 'workday' && !this.hasStarted) {
+      this.startTaskTimer();
     }
 
     this.hasStarted = true;
@@ -390,6 +429,10 @@ export class FlappyBirdScene extends Phaser.Scene {
         pipe.scored = true;
         this.score += 1;
         this.updateScore();
+
+        if (this.mode === 'workday') {
+          this.completeTask(true, this.score * 100 + Math.round(this.getTaskTimeRemaining() * 10));
+        }
       }
     }
   }
@@ -421,6 +464,11 @@ export class FlappyBirdScene extends Phaser.Scene {
   }
 
   private endRun() {
+    if (this.mode === 'workday') {
+      this.completeTask(false, this.score * 25, 1);
+      return;
+    }
+
     this.isGameOver = true;
     this.setPromptText('Game over - click or press Space to retry');
     this.setPromptVisible(true);
@@ -467,9 +515,10 @@ export class FlappyBirdScene extends Phaser.Scene {
 
   private cleanup() {
     this.scale.off('resize', this.layout, this);
-    this.input.off('pointerdown', this.flap, this);
-    this.input.keyboard?.off('keydown-SPACE', this.flap, this);
-    this.input.keyboard?.off('keydown-UP', this.flap, this);
+    this.input.off('pointerdown', this.flapFromPointer, this);
+    this.input.keyboard?.off('keydown-SPACE', this.flapFromKeyboard, this);
+    this.input.keyboard?.off('keydown-UP', this.flapFromKeyboard, this);
+    this.cleanupMiniGame();
     this.hudRoot?.remove();
     this.hudRoot = undefined;
     this.scoreValue = undefined;
