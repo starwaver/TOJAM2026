@@ -5,12 +5,12 @@ export class SceneTransitionService {
   static start(scene: Phaser.Scene, intent: SceneTransitionIntent): void {
     switch (intent.kind) {
       case 'immediate':
-        scene.scene.start(intent.target, intent.data);
+        scene.scene.start(intent.target, intent.data ?? {});
         break;
 
       case 'timed':
         scene.time.delayedCall(intent.durationMs, () => {
-          scene.scene.start(intent.target, intent.data);
+          scene.scene.start(intent.target, intent.data ?? {});
         });
         break;
 
