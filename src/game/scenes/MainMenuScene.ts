@@ -42,6 +42,14 @@ export class MainMenuScene extends Phaser.Scene {
         data: { mode: 'standalone' },
       });
     });
+
+    this.createButton('Slide Deck Disaster', this.scale.width / 2, this.scale.height / 2 + 166, () => {
+      SceneTransitionService.start(this, {
+        kind: 'immediate',
+        target: SceneKeys.slideDeckDisaster,
+        data: { mode: 'standalone' },
+      });
+    });
   }
 
   private createButton(label: string, x: number, y: number, onClick: () => void): void {
