@@ -4,6 +4,7 @@ import { GameOverScene } from '../scenes/GameOverScene';
 import { MainMenuScene } from '../scenes/MainMenuScene';
 import { PreloadScene } from '../scenes/PreloadScene';
 import { ResultsScene } from '../scenes/ResultsScene';
+import { TaskIntroScene } from '../scenes/TaskIntroScene';
 import { WorkdayScene } from '../scenes/WorkdayScene';
 import { FlappyBirdScene } from '../../scenes/FlappyBirdScene';
 
@@ -23,5 +24,5 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, PreloadScene, MainMenuScene, WorkdayScene, ResultsScene, GameOverScene, FlappyBirdScene],
+  scene: [BootScene, PreloadScene, MainMenuScene, WorkdayScene, TaskIntroScene, ResultsScene, GameOverScene, FlappyBirdScene],
 };
