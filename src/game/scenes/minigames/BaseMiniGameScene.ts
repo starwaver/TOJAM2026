@@ -1,14 +1,18 @@
 import Phaser from 'phaser';
+import { GameState } from '../../core/GameState';
 import { EventBus } from '../../core/EventBus';
 import { SceneTransitionService } from '../../core/SceneTransitionService';
 import { GameEvents } from '../../types/GameEvents';
 import { SceneKeys } from '../../types/SceneKeys';
 import type { MiniGameSceneData, TaskConfig, TaskResult } from '../../types/TaskTypes';
+import { WorkdayHUD } from '../../ui/WorkdayHUD';
 
 export abstract class BaseMiniGameScene extends Phaser.Scene {
   protected mode: 'workday' | 'standalone' = 'standalone';
   protected taskConfig?: TaskConfig;
   private taskTimer?: Phaser.Time.TimerEvent;
+  private hudRefreshTimer?: Phaser.Time.TimerEvent;
+  private workdayHud?: WorkdayHUD;
   private completed = false;
 
   init(data: MiniGameSceneData = {}): void {
@@ -30,6 +34,18 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
         this.completeTask(false, 0, 1);
       }
     });
+
+    if (this.mode === 'workday') {
+      this.workdayHud = new WorkdayHUD(this.taskConfig);
+      this.workdayHud.mount();
+      this.refreshHud();
+      this.hudRefreshTimer = this.time.addEvent({
+        delay: 100,
+        loop: true,
+        callback: this.refreshHud,
+        callbackScope: this,
+      });
+    }
   }
 
   protected getTaskTimeRemaining(): number {
@@ -73,6 +89,14 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
 
   protected cleanupMiniGame(): void {
     this.taskTimer?.remove();
+    this.hudRefreshTimer?.remove();
+    this.workdayHud?.destroy();
     this.taskTimer = undefined;
+    this.hudRefreshTimer = undefined;
+    this.workdayHud = undefined;
+  }
+
+  private refreshHud(): void {
+    this.workdayHud?.update(GameState.data, this.getTaskTimeRemaining());
   }
 }
