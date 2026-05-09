@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameState } from '../core/GameState';
+import { SceneTransitionService } from '../core/SceneTransitionService';
 import { taskDirector } from '../systems/TaskDirector';
 import { SceneKeys } from '../types/SceneKeys';
 
@@ -31,11 +32,15 @@ export class MainMenuScene extends Phaser.Scene {
     this.createButton('Start Workday', this.scale.width / 2, this.scale.height / 2 + 18, () => {
       GameState.reset();
       taskDirector.reset();
-      this.scene.start(SceneKeys.workday);
+      SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.workday });
     });
 
     this.createButton('Flappy Demo', this.scale.width / 2, this.scale.height / 2 + 92, () => {
-      this.scene.start(SceneKeys.flappyBird, { mode: 'standalone' });
+      SceneTransitionService.start(this, {
+        kind: 'immediate',
+        target: SceneKeys.flappyBird,
+        data: { mode: 'standalone' },
+      });
     });
   }
 

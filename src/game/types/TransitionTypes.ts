@@ -4,17 +4,17 @@ export type SceneTransitionIntent =
   | {
       kind: 'immediate';
       target: SceneKey;
-      data?: unknown;
+      data?: object;
     }
   | {
       kind: 'timed';
       target: SceneKey;
       durationMs: number;
-      data?: unknown;
+      data?: object;
     }
   | {
       kind: 'video';
       target: SceneKey;
       videoKey: string;
-      data?: unknown;
+      data?: object;
     };

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { SceneTransitionService } from '../core/SceneTransitionService';
 import { SceneKeys } from '../types/SceneKeys';
 
 export class PreloadScene extends Phaser.Scene {
@@ -7,6 +8,6 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.scene.start(SceneKeys.mainMenu);
+    SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.mainMenu });
   }
 }

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameState } from '../core/GameState';
+import { SceneTransitionService } from '../core/SceneTransitionService';
 import { SceneKeys } from '../types/SceneKeys';
 
 export class ResultsScene extends Phaser.Scene {
@@ -30,7 +31,7 @@ export class ResultsScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.createButton('Main Menu', this.scale.width / 2, this.scale.height / 2 + 128, () => {
-      this.scene.start(SceneKeys.mainMenu);
+      SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.mainMenu });
     });
   }
 

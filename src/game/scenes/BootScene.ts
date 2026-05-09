@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { SceneTransitionService } from '../core/SceneTransitionService';
 import { SceneKeys } from '../types/SceneKeys';
 
 export class BootScene extends Phaser.Scene {
@@ -8,6 +9,6 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor('#101820');
-    this.scene.start(SceneKeys.preload);
+    SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.preload });
   }
 }
