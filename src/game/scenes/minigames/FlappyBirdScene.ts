@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
-import { DEFAULT_CONFIG, FlappyConfig } from '../config';
+import { DEFAULT_CONFIG, FlappyConfig } from '../../../config';
+import { SceneKeys } from '../../types/SceneKeys';
+import type { MiniGameSceneData } from '../../types/TaskTypes';
+import { BaseMiniGameScene } from './BaseMiniGameScene';
 
 type PipePair = {
   top: Phaser.GameObjects.Rectangle;
@@ -12,7 +15,7 @@ const BIRD_RADIUS = 18;
 const PIPE_WIDTH = 74;
 const GROUND_HEIGHT = 68;
 
-export class FlappyBirdScene extends Phaser.Scene {
+export class FlappyBirdScene extends BaseMiniGameScene {
   private bird?: Phaser.GameObjects.Container;
   private birdWing?: Phaser.GameObjects.Triangle;
   private pipes: PipePair[] = [];
@@ -29,10 +32,12 @@ export class FlappyBirdScene extends Phaser.Scene {
   private cfg: FlappyConfig = { ...DEFAULT_CONFIG };
 
   constructor() {
-    super('FlappyBirdScene');
+    super(SceneKeys.flappyBird);
   }
 
-  init(data: { config?: FlappyConfig }) {
+  init(data: (MiniGameSceneData & { config?: FlappyConfig }) = {}) {
+    super.init(data);
+
     if (data.config) {
       this.cfg = { ...DEFAULT_CONFIG, ...data.config };
     } else {
@@ -63,6 +68,10 @@ export class FlappyBirdScene extends Phaser.Scene {
 
     this.layout(this.scale.gameSize);
     this.spawnPipe();
+
+    if (this.mode === 'workday') {
+      this.startTaskTimer();
+    }
   }
 
   update(time: number, delta: number) {
@@ -162,7 +171,7 @@ export class FlappyBirdScene extends Phaser.Scene {
     homeButton.type = 'button';
     homeButton.textContent = 'Home';
     this.applyButtonStyle(homeButton);
-    homeButton.addEventListener('click', () => this.scene.start('GameScene'));
+    homeButton.addEventListener('click', () => this.scene.start(SceneKeys.mainMenu));
 
     const score = document.createElement('div');
     score.textContent = '0';
@@ -390,6 +399,10 @@ export class FlappyBirdScene extends Phaser.Scene {
         pipe.scored = true;
         this.score += 1;
         this.updateScore();
+
+        if (this.mode === 'workday') {
+          this.completeTask(true, this.score * 100 + Math.round(this.getTaskTimeRemaining() * 10));
+        }
       }
     }
   }
@@ -421,6 +434,11 @@ export class FlappyBirdScene extends Phaser.Scene {
   }
 
   private endRun() {
+    if (this.mode === 'workday') {
+      this.completeTask(false, this.score * 25, 1);
+      return;
+    }
+
     this.isGameOver = true;
     this.setPromptText('Game over - click or press Space to retry');
     this.setPromptVisible(true);
@@ -470,6 +488,7 @@ export class FlappyBirdScene extends Phaser.Scene {
     this.input.off('pointerdown', this.flap, this);
     this.input.keyboard?.off('keydown-SPACE', this.flap, this);
     this.input.keyboard?.off('keydown-UP', this.flap, this);
+    this.cleanupMiniGame();
     this.hudRoot?.remove();
     this.hudRoot = undefined;
     this.scoreValue = undefined;

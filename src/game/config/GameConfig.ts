@@ -6,7 +6,7 @@ import { PreloadScene } from '../scenes/PreloadScene';
 import { ResultsScene } from '../scenes/ResultsScene';
 import { TaskIntroScene } from '../scenes/TaskIntroScene';
 import { WorkdayScene } from '../scenes/WorkdayScene';
-import { FlappyBirdScene } from '../../scenes/FlappyBirdScene';
+import { FlappyBirdScene } from '../scenes/minigames/FlappyBirdScene';
 
 export const GameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
