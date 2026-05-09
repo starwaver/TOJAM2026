@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
+import { BootScene } from '../scenes/BootScene';
+import { GameOverScene } from '../scenes/GameOverScene';
+import { MainMenuScene } from '../scenes/MainMenuScene';
+import { PreloadScene } from '../scenes/PreloadScene';
+import { ResultsScene } from '../scenes/ResultsScene';
 import { FlappyBirdScene } from '../../scenes/FlappyBirdScene';
-import { GameScene } from '../../scenes/GameScene';
 
 export const GameConfig: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -18,5 +22,5 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [GameScene, FlappyBirdScene],
+  scene: [BootScene, PreloadScene, MainMenuScene, ResultsScene, GameOverScene, FlappyBirdScene],
 };
