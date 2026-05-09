@@ -59,7 +59,7 @@ export class BossFightScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    bg.on('pointerdown', onClick);
+    bg.on('pointerup', onClick);
     bg.on('pointerover', () => bg.setFillStyle(0xffd166));
     bg.on('pointerout', () => bg.setFillStyle(0xf2c14e));
     this.add.container(0, 0, [bg, text]);
