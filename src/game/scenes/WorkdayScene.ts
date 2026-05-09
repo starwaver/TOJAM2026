@@ -75,7 +75,6 @@ export class WorkdayScene extends Phaser.Scene {
     const difficulty = DifficultySystem.getDifficulty(state.completedTasks + state.failedTasks);
     const cx = this.scale.width / 2;
 
-    // ── Title ──
     this.add
       .text(cx, 52, "BOSS'S TASKS", {
         fontFamily: 'Arial, sans-serif',
@@ -85,7 +84,6 @@ export class WorkdayScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // ── Day progress ──
     this.add
       .text(cx, 88, `Day Progress: ${Math.round(state.dayProgress)}%`, {
         fontFamily: 'Arial, sans-serif',
@@ -94,43 +92,41 @@ export class WorkdayScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // ── Vitals meters ──
     const meterWidth = 220;
     const meterHeight = 18;
     const meterX = cx - meterWidth / 2;
 
-    // Sanity
-    const sanityY = 128;
-    this.add.text(meterX, sanityY - 20, `Sanity: ${Math.round(state.sanity)}/${BalanceConfig.maxSanity}`, {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '14px',
-      fontStyle: '700',
-      color: '#4ecdc4',
-    });
+    const sanityY = 138;
+    this.createMeter(
+      `Sanity: ${Math.round(state.sanity)}/${BalanceConfig.maxSanity}`,
+      state.sanity,
+      BalanceConfig.maxSanity,
+      meterX,
+      sanityY,
+      meterWidth,
+      meterHeight,
+      0x4ecdc4,
+      '#4ecdc4',
+    );
 
-    this.add.rectangle(meterX, sanityY, meterWidth, meterHeight, 0x2a3a4a).setOrigin(0, 0.5);
-    const sanityFillW = Math.max(0, (state.sanity / BalanceConfig.maxSanity) * meterWidth);
-    this.add.rectangle(meterX, sanityY, sanityFillW, meterHeight, 0x4ecdc4).setOrigin(0, 0.5);
+    const rageY = sanityY + 56;
+    this.createMeter(
+      `Rage: ${Math.round(state.rage)}/${BalanceConfig.maxRage}`,
+      state.rage,
+      BalanceConfig.maxRage,
+      meterX,
+      rageY,
+      meterWidth,
+      meterHeight,
+      0xe74c3c,
+      '#e74c3c',
+    );
 
-    // Rage
-    const rageY = sanityY + 44;
-    this.add.text(meterX, rageY - 20, `Rage: ${Math.round(state.rage)}/${BalanceConfig.maxRage}`, {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '14px',
-      fontStyle: '700',
-      color: '#e74c3c',
-    });
-
-    this.add.rectangle(meterX, rageY, meterWidth, meterHeight, 0x2a3a4a).setOrigin(0, 0.5);
-    const rageFillW = Math.max(0, (state.rage / BalanceConfig.maxRage) * meterWidth);
-    this.add.rectangle(meterX, rageY, rageFillW, meterHeight, 0xe74c3c).setOrigin(0, 0.5);
-
-    // ── Task list ──
     const eligibleTasks = TaskRegistry.filter(
       (task) => difficulty >= task.minDifficulty && difficulty <= task.maxDifficulty,
     );
 
-    const startY = rageY + 64;
+    const startY = rageY + 74;
     const buttonSpacing = 72;
 
     if (eligibleTasks.length === 0) {
@@ -148,6 +144,29 @@ export class WorkdayScene extends Phaser.Scene {
       const y = startY + index * buttonSpacing;
       this.createTaskButton(task, cx, y, difficulty);
     });
+  }
+
+  private createMeter(
+    label: string,
+    value: number,
+    maxValue: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    fillColor: number,
+    labelColor: string,
+  ): void {
+    this.add.text(x, y - 32, label, {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '14px',
+      fontStyle: '700',
+      color: labelColor,
+    });
+
+    this.add.rectangle(x, y, width, height, 0x2a3a4a).setOrigin(0, 0.5);
+    const fillWidth = Phaser.Math.Clamp(value / maxValue, 0, 1) * width;
+    this.add.rectangle(x, y, fillWidth, height, fillColor).setOrigin(0, 0.5);
   }
 
   private createTaskButton(task: TaskDefinition, x: number, y: number, difficulty: number): void {
