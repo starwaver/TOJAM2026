@@ -1,3 +1,4 @@
+import Phaser from 'phaser';
 import { BalanceConfig } from '../config/BalanceConfig';
 import type { GameStateData } from '../core/GameState';
 import type { TaskResult } from '../types/TaskTypes';

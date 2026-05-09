@@ -1,3 +1,4 @@
+import Phaser from 'phaser';
 import { BalanceConfig } from '../config/BalanceConfig';
 
 export class DifficultySystem {
