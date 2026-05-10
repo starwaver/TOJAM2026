@@ -18,11 +18,11 @@ export const TaskRegistry: TaskDefinition[] = [
     id: 'coffee_run',
     displayName: 'Boss Coffee Run',
     scene: SceneKeys.coffeeRun,
-    baseTimeLimit: 30,
+    baseTimeLimit: 15,
     minDifficulty: 1,
     maxDifficulty: 10,
     difficultyTimeScale: {
-      minMultiplier: 0.65,
+      minMultiplier: 5 / (15 * 0.4),
       maxMultiplier: 1,
     },
   },

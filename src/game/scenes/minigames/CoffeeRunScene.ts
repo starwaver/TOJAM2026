@@ -33,7 +33,7 @@ const BOSS_ASSET_PATH = 'assets/boss.png';
 const MACHINE_CUP_X = 708;
 const MACHINE_CUP_BOTTOM_Y = 635;
 const MUG_HANDLE_OFFSET_RATIO = 0.15;
-const STANDALONE_TIME_LIMIT = 30;
+const STANDALONE_TIME_LIMIT = 15;
 
 const cupLabels: Record<CupType, string> = {
   mug: 'mug',
@@ -44,6 +44,12 @@ const cupLabels: Record<CupType, string> = {
 const strengthLabels: Record<Strength, string> = {
   normal: 'normal',
   strong: 'strong',
+  espresso: 'espresso',
+};
+
+const coffeeLabels: Record<Strength, string> = {
+  normal: 'coffee',
+  strong: 'strong coffee',
   espresso: 'espresso',
 };
 
@@ -350,12 +356,14 @@ export class CoffeeRunScene extends BaseMiniGameScene {
   }
 
   private getOrderText(): string {
+    const drinkText = `${cupLabels[this.order.cup]} of ${coffeeLabels[this.order.strength]}`;
+
     if (this.order.sugar === 0 && this.order.dairy === 'none') {
-      return `I need a ${strengthLabels[this.order.strength]} ${cupLabels[this.order.cup]}.\nBlack coffee.`;
+      return `I need a ${drinkText}.\nBlack coffee.`;
     }
 
     const sugarText = this.order.sugar === 1 ? '1 sugar' : `${this.order.sugar} sugars`;
-    return `I need a ${strengthLabels[this.order.strength]} ${cupLabels[this.order.cup]}.\n${sugarText}. ${dairyLabels[this.order.dairy]}.`;
+    return `I need a ${drinkText}.\n${sugarText}. ${dairyLabels[this.order.dairy]}.`;
   }
 
   private handleChoice(choiceKey: string): void {
