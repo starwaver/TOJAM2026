@@ -65,6 +65,7 @@ const assetFiles: Record<string, string> = {
   'coffee-milk-pitcher': 'milk-pitcher.png',
   'coffee-sugar-cube': 'sugar-cube.png',
   'coffee-sugar-jar': 'sugar-jar.png',
+  'coffee-trash-can': 'trash-can.png',
 };
 
 export class CoffeeRunScene extends BaseMiniGameScene {
@@ -80,7 +81,7 @@ export class CoffeeRunScene extends BaseMiniGameScene {
   private bossZone?: Phaser.GameObjects.Zone;
   private trashZone?: Phaser.GameObjects.Zone;
   private bossDropVisual?: Phaser.GameObjects.Rectangle;
-  private trashVisual?: Phaser.GameObjects.Rectangle;
+  private trashVisual?: Phaser.GameObjects.Image;
   private resultGroup?: Phaser.GameObjects.Container;
   private order!: CoffeeOrder;
   private drink: DrinkState = { sugar: 0 };
@@ -256,23 +257,18 @@ export class CoffeeRunScene extends BaseMiniGameScene {
       return;
     }
 
-    this.trashVisual = this.add.rectangle(116, 892, 154, 120, 0x30373c, 0.95).setStrokeStyle(4, 0xcbd5e0);
-    const lid = this.add.rectangle(116, 818, 170, 24, 0x46525a).setStrokeStyle(3, 0x1a2028);
-    const lines = [
-      this.add.line(82, 892, 0, -40, 0, 40, 0x718096, 0.7).setLineWidth(3),
-      this.add.line(116, 892, 0, -44, 0, 44, 0x718096, 0.7).setLineWidth(3),
-      this.add.line(150, 892, 0, -40, 0, 40, 0x718096, 0.7).setLineWidth(3),
-    ];
+    const trashVisual = this.add.image(126, 858, 'coffee-trash-can').setDisplaySize(164, 246).setAlpha(0.96);
+    this.trashVisual = trashVisual;
     const label = this.add
-      .text(116, 974, 'TRASH', {
+      .text(126, 996, 'TRASH', {
         fontFamily: 'Arial, sans-serif',
         fontSize: '18px',
         fontStyle: '700',
         color: '#f8f5f0',
       })
       .setOrigin(0.5);
-    this.trashZone = this.add.zone(116, 892, 188, 180).setRectangleDropZone(188, 180);
-    this.stage.add([this.trashVisual, lid, ...lines, label, this.trashZone]);
+    this.trashZone = this.add.zone(126, 870, 196, 238).setRectangleDropZone(196, 238);
+    this.stage.add([trashVisual, label, this.trashZone]);
   }
 
   private createFeedback(): void {
@@ -664,7 +660,12 @@ export class CoffeeRunScene extends BaseMiniGameScene {
     const overBoss = active && this.isCupOverZone(this.bossZone);
     const overTrash = active && this.isCupOverZone(this.trashZone);
     this.bossDropVisual?.setFillStyle(0x68d391, overBoss ? 0.42 : 0.18);
-    this.trashVisual?.setFillStyle(overTrash ? 0xe74c3c : 0x30373c, 0.95);
+    this.trashVisual?.setAlpha(overTrash ? 1 : 0.96);
+    if (overTrash) {
+      this.trashVisual?.setTint(0xff8a7a);
+    } else {
+      this.trashVisual?.clearTint();
+    }
   }
 
   private highlightStrength(strength: Strength, active: boolean): void {
