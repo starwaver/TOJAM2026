@@ -50,6 +50,12 @@ export class MainMenuScene extends Phaser.Scene {
         data: { mode: 'standalone' },
       });
     });
+
+    this.createButton('Boss Fight Demo', this.scale.width / 2, this.scale.height / 2 + 240, () => {
+      GameState.reset();
+      taskDirector.reset();
+      SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.bossFight });
+    });
   }
 
   private createButton(label: string, x: number, y: number, onClick: () => void): void {
