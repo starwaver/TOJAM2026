@@ -28,6 +28,9 @@ const STAGE_WIDTH = 1536;
 const STAGE_HEIGHT = 1024;
 const SHELF_Y = 755;
 const ASSET_PATH = 'assets/coffee/';
+const MACHINE_CUP_X = 708;
+const MACHINE_CUP_BOTTOM_Y = 635;
+const MUG_HANDLE_OFFSET_RATIO = 0.15;
 
 const cupLabels: Record<CupType, string> = {
   mug: 'mug',
@@ -398,14 +401,19 @@ export class CoffeeRunScene extends BaseMiniGameScene {
     this.dairyMark?.destroy();
     this.clearSugarCubes();
 
-    const displayHeight = cup === 'tumbler' ? 198 : cup === 'paper' ? 178 : 160;
-    const activeCup = this.add.image(708, 610, cupTextureKeys[cup]).setDisplaySize(10, displayHeight).setDepth(10);
+    const displayHeight = cup === 'tumbler' ? 186 : cup === 'paper' ? 168 : 150;
+    const activeCup = this.add.image(MACHINE_CUP_X, MACHINE_CUP_BOTTOM_Y - displayHeight / 2, cupTextureKeys[cup]).setDisplaySize(10, displayHeight).setDepth(10);
     const scale = displayHeight / activeCup.height;
     activeCup.setDisplaySize(activeCup.width * scale, displayHeight);
+    activeCup.setX(this.getMachineCupX(cup, activeCup.displayWidth));
     activeCup.setInteractive({ useHandCursor: true });
     activeCup.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.startCupDrag(pointer));
     this.stage.add(activeCup);
     this.activeCup = activeCup;
+  }
+
+  private getMachineCupX(cup: CupType, displayWidth: number): number {
+    return cup === 'mug' ? MACHINE_CUP_X + displayWidth * MUG_HANDLE_OFFSET_RATIO : MACHINE_CUP_X;
   }
 
   private tintActiveCup(color: number): void {
@@ -626,14 +634,14 @@ export class CoffeeRunScene extends BaseMiniGameScene {
   }
 
   private returnCupToMachine(): void {
-    if (!this.activeCup) {
+    if (!this.activeCup || !this.drink.cup) {
       return;
     }
 
     this.tweens.add({
       targets: this.activeCup,
-      x: 708,
-      y: 610,
+      x: this.getMachineCupX(this.drink.cup, this.activeCup.displayWidth),
+      y: MACHINE_CUP_BOTTOM_Y - this.activeCup.displayHeight / 2,
       duration: 180,
       ease: 'Sine.easeOut',
       onUpdate: () => this.syncCupAddOns(),
