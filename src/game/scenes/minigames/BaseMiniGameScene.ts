@@ -7,6 +7,7 @@ import { GameEvents } from '../../types/GameEvents';
 import { SceneKeys } from '../../types/SceneKeys';
 import type { MiniGameSceneData, TaskConfig, TaskResult } from '../../types/TaskTypes';
 import { WorkdayHUD } from '../../ui/WorkdayHUD';
+import { WorkdayTaskOverlay } from '../../ui/WorkdayTaskOverlay';
 
 export abstract class BaseMiniGameScene extends Phaser.Scene {
   protected mode: 'workday' | 'standalone' = 'standalone';
@@ -14,6 +15,7 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
   private taskTimer?: Phaser.Time.TimerEvent;
   private hudRefreshTimer?: Phaser.Time.TimerEvent;
   private workdayHud?: WorkdayHUD;
+  private workdayTaskOverlay?: WorkdayTaskOverlay;
   private completed = false;
 
   init(data: MiniGameSceneData = {}): void {
@@ -118,12 +120,19 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
     this.taskTimer?.remove();
     this.hudRefreshTimer?.remove();
     this.workdayHud?.destroy();
+    this.workdayTaskOverlay?.destroy();
     this.taskTimer = undefined;
     this.hudRefreshTimer = undefined;
     this.workdayHud = undefined;
+    this.workdayTaskOverlay = undefined;
   }
 
   private refreshHud(): void {
+    if (this.mode === 'workday') {
+      workdayTaskQueue.update(GameState.data.difficultyLevel);
+      this.workdayTaskOverlay?.update();
+    }
+
     this.workdayHud?.update(GameState.data, this.getTaskTimeRemaining());
   }
 
@@ -134,6 +143,8 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
 
     this.workdayHud = new WorkdayHUD(this.taskConfig);
     this.workdayHud.mount();
+    this.workdayTaskOverlay = new WorkdayTaskOverlay(292);
+    this.workdayTaskOverlay.mount();
     this.startHudRefresh();
   }
 

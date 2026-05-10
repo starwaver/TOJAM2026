@@ -16,6 +16,7 @@ import {
 } from '../systems/WorkdayTaskQueue';
 import { SceneKeys } from '../types/SceneKeys';
 import type { TaskConfig, TaskResult, WorkdaySceneData } from '../types/TaskTypes';
+import { WorkdayTaskOverlay } from '../ui/WorkdayTaskOverlay';
 
 type OfficeLayout = {
   scale: number;
@@ -51,7 +52,7 @@ export class WorkdayScene extends Phaser.Scene {
   private editorFrameSelect?: HTMLSelectElement;
   private editorStatus?: HTMLDivElement;
   private workdayUiRoot?: HTMLElement;
-  private assignedTaskRoot?: HTMLDivElement;
+  private taskOverlay?: WorkdayTaskOverlay;
   private incomingCountValue?: HTMLDivElement;
   private incomingDetailValue?: HTMLDivElement;
   private taskRefreshTimer?: Phaser.Time.TimerEvent;
@@ -138,7 +139,7 @@ export class WorkdayScene extends Phaser.Scene {
     }
 
     this.mountWorkdayUi(difficulty);
-    this.mountAssignedTaskUi();
+    this.mountTaskOverlay();
     this.startTaskRefresh();
   }
 
@@ -198,7 +199,7 @@ export class WorkdayScene extends Phaser.Scene {
 
     const claimedAssignment = workdayTaskQueue.claim(assignment.instanceId, nowMs);
     if (!claimedAssignment) {
-      this.renderAssignedTasks();
+      this.taskOverlay?.update();
       return;
     }
 
@@ -511,132 +512,19 @@ export class WorkdayScene extends Phaser.Scene {
       return;
     }
 
-    this.renderAssignedTasks();
+    this.taskOverlay?.update();
     this.updateQueueStatusCard(this.activeDifficulty);
   }
 
-  private mountAssignedTaskUi(): void {
-    const app = document.querySelector<HTMLDivElement>('#app');
-    if (!app) {
-      return;
+  private mountTaskOverlay(): void {
+    if (!this.taskOverlay) {
+      this.taskOverlay = new WorkdayTaskOverlay(this.getSidebarWidth() + WORKDAY_PANEL_GAP, (assignment) => {
+        this.selectTask(assignment);
+      });
     }
 
-    this.assignedTaskRoot?.remove();
-
-    const root = document.createElement('div');
-    root.setAttribute('aria-label', 'Incoming tasks');
-    root.style.position = 'absolute';
-    root.style.top = '14px';
-    root.style.left = `${this.getSidebarWidth() + WORKDAY_PANEL_GAP}px`;
-    root.style.right = '14px';
-    root.style.zIndex = '4';
-    root.style.display = 'grid';
-    root.style.gap = '8px';
-    root.style.pointerEvents = 'auto';
-    root.style.userSelect = 'none';
-    root.style.fontFamily = 'Arial, Helvetica, sans-serif';
-    root.addEventListener('pointerdown', (event) => event.stopPropagation());
-    root.addEventListener('click', (event) => event.stopPropagation());
-
-    app.append(root);
-    this.assignedTaskRoot = root;
-    this.renderAssignedTasks();
-  }
-
-  private renderAssignedTasks(): void {
-    if (!this.assignedTaskRoot) {
-      return;
-    }
-
-    const assignments = workdayTaskQueue.getAssignments();
-    this.assignedTaskRoot.replaceChildren();
-
-    if (assignments.length === 0) {
-      const idle = document.createElement('div');
-      idle.textContent = `Next ping ${Math.ceil(workdayTaskQueue.getNextAssignmentSeconds())}s`;
-      idle.style.justifySelf = 'center';
-      idle.style.padding = '10px 14px';
-      idle.style.background = 'rgba(16, 24, 32, 0.76)';
-      idle.style.border = '1px solid rgba(248, 245, 240, 0.24)';
-      idle.style.color = '#cdd8d5';
-      idle.style.font = '900 13px Arial, sans-serif';
-      this.assignedTaskRoot.append(idle);
-      return;
-    }
-
-    const list = document.createElement('div');
-    list.style.display = 'flex';
-    list.style.flexWrap = 'wrap';
-    list.style.gap = '10px';
-
-    for (const assignment of assignments) {
-      list.append(this.createAssignedTaskButton(assignment));
-    }
-
-    this.assignedTaskRoot.append(list);
-  }
-
-  private createAssignedTaskButton(assignment: AssignedWorkdayTask): HTMLButtonElement {
-    const remaining = workdayTaskQueue.getTaskTimeRemainingSeconds(assignment);
-    const isCritical = remaining <= 10;
-    const flashOn = isCritical && Math.floor(Date.now() / 250) % 2 === 0;
-    const progress = Phaser.Math.Clamp((remaining / WORKDAY_TASK_TIME_LIMIT_SECONDS) * 100, 0, 100);
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.style.display = 'grid';
-    button.style.gap = '8px';
-    button.style.width = '280px';
-    button.style.maxWidth = 'calc(100vw - 28px)';
-    button.style.minHeight = '82px';
-    button.style.padding = '12px';
-    button.style.border = `2px solid ${isCritical ? '#e74c3c' : 'rgba(242, 193, 78, 0.92)'}`;
-    button.style.background = flashOn ? '#e74c3c' : 'rgba(16, 24, 32, 0.92)';
-    button.style.color = '#f8f5f0';
-    button.style.textAlign = 'left';
-    button.style.cursor = 'pointer';
-    button.style.boxShadow = flashOn ? '0 0 0 4px rgba(231, 76, 60, 0.22)' : '0 12px 28px rgba(0, 0, 0, 0.34)';
-    button.style.fontFamily = 'Arial, Helvetica, sans-serif';
-
-    const row = document.createElement('div');
-    row.style.display = 'grid';
-    row.style.gridTemplateColumns = '1fr auto';
-    row.style.gap = '10px';
-    row.style.alignItems = 'center';
-
-    const title = document.createElement('span');
-    title.textContent = assignment.task.displayName;
-    title.style.font = '900 16px Arial, sans-serif';
-
-    const time = document.createElement('span');
-    time.textContent = `${Math.ceil(remaining)}s`;
-    time.style.color = isCritical ? '#fff2a8' : '#9ed8db';
-    time.style.font = '900 18px Arial, sans-serif';
-
-    const track = document.createElement('div');
-    track.style.height = '8px';
-    track.style.overflow = 'hidden';
-    track.style.background = 'rgba(248, 245, 240, 0.14)';
-
-    const fill = document.createElement('div');
-    fill.style.width = `${progress}%`;
-    fill.style.height = '100%';
-    fill.style.background = isCritical ? '#e74c3c' : '#f2c14e';
-
-    row.append(title, time);
-    track.append(fill);
-    button.append(row, track);
-    button.addEventListener('pointerdown', (event) => {
-      event.stopPropagation();
-      this.selectTask(assignment);
-    });
-    button.addEventListener('pointerover', () => {
-      button.style.transform = 'translateY(-2px)';
-    });
-    button.addEventListener('pointerout', () => {
-      button.style.transform = 'translateY(0)';
-    });
-
-    return button;
+    this.taskOverlay.mount();
+    this.taskOverlay.update();
   }
 
   private createDomMeter(label: string, value: number, maxValue: number, color: string): HTMLElement {
@@ -864,9 +752,7 @@ export class WorkdayScene extends Phaser.Scene {
       this.workdayUiRoot.style.display = enabled ? 'none' : 'flex';
     }
 
-    if (this.assignedTaskRoot) {
-      this.assignedTaskRoot.style.display = enabled ? 'none' : 'grid';
-    }
+    this.taskOverlay?.setVisible(!enabled);
 
     for (const item of this.officeItems) {
       this.applyEditorInteractivity(item.gameObject);
@@ -1144,8 +1030,8 @@ export class WorkdayScene extends Phaser.Scene {
     this.taskRefreshTimer?.remove();
     this.workdayUiRoot?.remove();
     this.workdayUiRoot = undefined;
-    this.assignedTaskRoot?.remove();
-    this.assignedTaskRoot = undefined;
+    this.taskOverlay?.destroy();
+    this.taskOverlay = undefined;
     this.incomingCountValue = undefined;
     this.incomingDetailValue = undefined;
     this.taskRefreshTimer = undefined;

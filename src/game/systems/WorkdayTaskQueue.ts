@@ -2,8 +2,8 @@ import { taskDirector } from './TaskDirector';
 import type { TaskDefinition, TaskResult } from '../types/TaskTypes';
 
 export const WORKDAY_TASK_TIME_LIMIT_SECONDS = 30;
-const MIN_ASSIGNMENT_DELAY_MS = 10_000;
-const MAX_ASSIGNMENT_DELAY_MS = 20_000;
+const MIN_ASSIGNMENT_DELAY_MS = 5_000;
+const MAX_ASSIGNMENT_DELAY_MS = 15_000;
 
 export interface AssignedWorkdayTask {
   instanceId: string;
@@ -15,12 +15,16 @@ export interface AssignedWorkdayTask {
 
 class WorkdayTaskQueue {
   private assignments: AssignedWorkdayTask[] = [];
+  private activeAssignment?: AssignedWorkdayTask;
+  private expiredResults: TaskResult[] = [];
   private nextAssignmentAtMs = 0;
   private sequence = 0;
   private hasSeededInitialAssignments = false;
 
   reset(nowMs = Date.now()): void {
     this.assignments = [];
+    this.activeAssignment = undefined;
+    this.expiredResults = [];
     this.sequence = 0;
     this.nextAssignmentAtMs = nowMs;
     this.hasSeededInitialAssignments = false;
@@ -34,11 +38,16 @@ class WorkdayTaskQueue {
     }
 
     this.spawnDueAssignments(difficulty, nowMs);
-    return this.collectExpired(nowMs);
+    this.collectExpired(nowMs);
+    return this.drainExpiredResults();
   }
 
   getAssignments(): AssignedWorkdayTask[] {
     return [...this.assignments].sort((a, b) => a.expiresAtMs - b.expiresAtMs);
+  }
+
+  getActiveAssignment(): AssignedWorkdayTask | undefined {
+    return this.activeAssignment;
   }
 
   claim(instanceId: string, nowMs = Date.now()): AssignedWorkdayTask | undefined {
@@ -52,11 +61,15 @@ class WorkdayTaskQueue {
       return undefined;
     }
 
+    this.activeAssignment = assignment;
     return assignment;
   }
 
   complete(instanceId: string): void {
     this.assignments = this.assignments.filter((assignment) => assignment.instanceId !== instanceId);
+    if (this.activeAssignment?.instanceId === instanceId) {
+      this.activeAssignment = undefined;
+    }
   }
 
   getTaskTimeRemainingSeconds(assignment: AssignedWorkdayTask, nowMs = Date.now()): number {
@@ -66,6 +79,23 @@ class WorkdayTaskQueue {
   getNextAssignmentSeconds(nowMs = Date.now()): number {
     this.ensureStarted(nowMs);
     return Math.max(0, (this.nextAssignmentAtMs - nowMs) / 1000);
+  }
+
+  update(difficulty: number, nowMs = Date.now()): void {
+    this.ensureStarted(nowMs);
+
+    if (!this.hasSeededInitialAssignments) {
+      this.seedInitialAssignments(difficulty, nowMs);
+    }
+
+    this.spawnDueAssignments(difficulty, nowMs);
+    this.collectExpired(nowMs);
+  }
+
+  drainExpiredResults(): TaskResult[] {
+    const results = this.expiredResults;
+    this.expiredResults = [];
+    return results;
   }
 
   private ensureStarted(nowMs: number): void {
@@ -102,11 +132,11 @@ class WorkdayTaskQueue {
     });
   }
 
-  private collectExpired(nowMs: number): TaskResult[] {
+  private collectExpired(nowMs: number): void {
     const expired = this.assignments.filter((assignment) => assignment.expiresAtMs <= nowMs);
     this.assignments = this.assignments.filter((assignment) => assignment.expiresAtMs > nowMs);
 
-    return expired.map((assignment) => ({
+    this.expiredResults.push(...expired.map((assignment) => ({
       taskId: assignment.task.id,
       success: false,
       score: 0,
@@ -114,7 +144,7 @@ class WorkdayTaskQueue {
       timeLimit: WORKDAY_TASK_TIME_LIMIT_SECONDS,
       timeRemainingRatio: 0,
       mistakes: 1,
-    }));
+    })));
   }
 
   private getRandomAssignmentDelayMs(): number {
