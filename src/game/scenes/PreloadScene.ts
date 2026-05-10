@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { MenuAssets } from '../assets/MenuAssets';
 import { OfficeAssets } from '../assets/OfficeAssets';
 import { RageAssets } from '../assets/RageAssets';
 import { SceneTransitionService } from '../core/SceneTransitionService';
@@ -10,6 +11,7 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.load.image(MenuAssets.coverKey, MenuAssets.coverPath);
     this.load.image(OfficeAssets.backgroundKey, OfficeAssets.backgroundPath);
     this.load.atlas(OfficeAssets.textureKey, OfficeAssets.spritesheetPath, OfficeAssets.atlasPath);
     this.load.json(OfficeAssets.metadataKey, OfficeAssets.metadataPath);

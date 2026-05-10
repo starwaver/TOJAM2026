@@ -113,11 +113,6 @@ export class WorkdayScene extends Phaser.Scene {
       return;
     }
 
-    if (SanitySystem.isDepleted(state)) {
-      SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.gameOver });
-      return;
-    }
-
     if (state.dayProgress >= BalanceConfig.dayCompleteProgress) {
       SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.results });
       return;
