@@ -7,6 +7,7 @@ import { PreloadScene } from '../scenes/PreloadScene';
 import { ResultsScene } from '../scenes/ResultsScene';
 import { TaskIntroScene } from '../scenes/TaskIntroScene';
 import { WorkdayScene } from '../scenes/WorkdayScene';
+import { CoffeeRunScene } from '../scenes/minigames/CoffeeRunScene';
 import { FlappyBirdScene } from '../scenes/minigames/FlappyBirdScene';
 import { SlideDeckDisasterScene } from '../scenes/minigames/SlideDeckDisasterScene';
 
@@ -37,5 +38,6 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
     GameOverScene,
     FlappyBirdScene,
     SlideDeckDisasterScene,
+    CoffeeRunScene,
   ],
 };
