@@ -12,6 +12,12 @@ export const OfficeAssets = {
   ceoTableBrokenPath: 'assets/office/ceo_table_broken.png',
   bossKey: 'boss-image',
   bossPath: 'assets/boss.png',
+  punchSounds: [
+    { key: 'punch-1', path: 'assets/sounds/sfx/punch 1.mp3' },
+    { key: 'punch-2', path: 'assets/sounds/sfx/punch 2.mp3' },
+    { key: 'punch-3', path: 'assets/sounds/sfx/punch 3.mp3' },
+    { key: 'punch-4', path: 'assets/sounds/sfx/punch 4.mp3' },
+  ],
 } as const;
 
 export const OfficeAssetFrames = {

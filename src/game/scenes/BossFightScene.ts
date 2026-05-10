@@ -798,6 +798,7 @@ export class BossFightScene extends Phaser.Scene {
     this.comboTimer = 2.35;
     this.shake = Math.max(this.shake, 9 + this.combo * 1.5 + this.styleState.rankIndex);
     this.hitPause = 0.045;
+    this.playRandomPunchSound();
     this.addParticles(this.boss.x, this.boss.y, 14, 170, 'hit');
     this.addStyle(125 + this.combo * 28, chargeSeconds > 0.75 ? 'CHARGED HIT' : 'HIT');
     this.addFloatingText(
@@ -806,6 +807,12 @@ export class BossFightScene extends Phaser.Scene {
       this.boss.y - 34,
       chargeSeconds > 0.75 ? 26 : 24,
     );
+  }
+
+  private playRandomPunchSound(): void {
+    const punchSounds = OfficeAssets.punchSounds;
+    const punchSound = punchSounds[Phaser.Math.Between(0, punchSounds.length - 1)];
+    this.sound.play(punchSound.key, { volume: 0.8 });
   }
 
   private breakItem(item: BreakableItemState): void {

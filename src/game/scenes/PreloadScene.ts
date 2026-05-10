@@ -18,6 +18,9 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image(OfficeAssets.ceoTableIntactKey, OfficeAssets.ceoTableIntactPath);
     this.load.image(OfficeAssets.ceoTableBrokenKey, OfficeAssets.ceoTableBrokenPath);
     this.load.image(OfficeAssets.bossKey, OfficeAssets.bossPath);
+    for (const punchSound of OfficeAssets.punchSounds) {
+      this.load.audio(punchSound.key, punchSound.path);
+    }
     this.load.image(RageAssets.transitionKey, RageAssets.transitionPath);
   }
 
