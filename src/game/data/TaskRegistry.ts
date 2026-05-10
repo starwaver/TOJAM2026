@@ -25,5 +25,9 @@ export const TaskRegistry: TaskDefinition[] = [
     baseTimeLimit: 30,
     minDifficulty: 1,
     maxDifficulty: 10,
+    difficultyTimeScale: {
+      minMultiplier: 0.65,
+      maxMultiplier: 1,
+    },
   },
 ];

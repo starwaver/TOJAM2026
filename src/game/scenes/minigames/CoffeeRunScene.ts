@@ -123,6 +123,7 @@ export class CoffeeRunScene extends BaseMiniGameScene {
 
     if (this.mode === 'workday') {
       this.prepareTaskHud();
+      this.startTaskTimer();
     }
 
     this.say('Pick the cup from the station.');
@@ -189,14 +190,6 @@ export class CoffeeRunScene extends BaseMiniGameScene {
       .setOrigin(0.5);
 
     this.bossDropVisual = this.add.rectangle(1344, 358, 250, 86, 0x68d391, 0.18).setStrokeStyle(4, 0x68d391, 0.75);
-    this.add
-      .text(1344, 358, 'Serve here', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '22px',
-        fontStyle: '700',
-        color: '#f8f5f0',
-      })
-      .setOrigin(0.5);
     this.bossZone = this.add.zone(1344, 358, 250, 112).setRectangleDropZone(250, 112);
 
     this.stage.add([bossPlate, body, bossHead, hair, eyeLeft, eyeRight, mouth, label, this.bossDropVisual, this.bossZone]);
@@ -589,13 +582,20 @@ export class CoffeeRunScene extends BaseMiniGameScene {
         },
       )
       .setOrigin(0.5);
-    const actionLabel = this.mode === 'workday' ? 'Continue' : 'Make Another';
-    const action = this.createResultButton(STAGE_WIDTH / 2 - 112, STAGE_HEIGHT / 2 + 82, actionLabel, () => this.handleResultAction());
-    const home = this.createResultButton(STAGE_WIDTH / 2 + 132, STAGE_HEIGHT / 2 + 82, 'Home', () => {
-      SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.mainMenu });
-    });
+    const actionLabel = this.mode === 'workday' ? 'Finish Task' : 'Make Another';
+    const actionX = this.mode === 'workday' ? STAGE_WIDTH / 2 : STAGE_WIDTH / 2 - 112;
+    const action = this.createResultButton(actionX, STAGE_HEIGHT / 2 + 82, actionLabel, () => this.handleResultAction());
+    const buttons: Phaser.GameObjects.Container[] = [action];
 
-    this.resultGroup = this.add.container(0, 0, [shade, panel, title, body, action, home]).setDepth(100);
+    if (this.mode !== 'workday') {
+      buttons.push(
+        this.createResultButton(STAGE_WIDTH / 2 + 132, STAGE_HEIGHT / 2 + 82, 'Home', () => {
+          SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.mainMenu });
+        }),
+      );
+    }
+
+    this.resultGroup = this.add.container(0, 0, [shade, panel, title, body, ...buttons]).setDepth(100);
     this.stage.add(this.resultGroup);
   }
 

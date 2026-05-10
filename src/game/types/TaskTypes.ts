@@ -7,6 +7,10 @@ export interface TaskDefinition {
   baseTimeLimit: number;
   minDifficulty: number;
   maxDifficulty: number;
+  difficultyTimeScale?: {
+    minMultiplier: number;
+    maxMultiplier: number;
+  };
 }
 
 export interface TaskConfig {
