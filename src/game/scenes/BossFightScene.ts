@@ -1,13 +1,18 @@
 import Phaser from 'phaser';
+import { OfficeAssets } from '../assets/OfficeAssets';
 import { BalanceConfig } from '../config/BalanceConfig';
 import { GameState } from '../core/GameState';
 import { SceneTransitionService } from '../core/SceneTransitionService';
+import {
+  BOSS_FIGHT_BREAKABLES,
+  BOSS_FIGHT_DECORATIONS,
+  type BreakableItemConfig,
+} from '../data/BossFightOfficeData';
 import { RageSystem } from '../systems/RageSystem';
 import { SanitySystem } from '../systems/SanitySystem';
 import { ScoreSystem } from '../systems/ScoreSystem';
 import { SceneKeys } from '../types/SceneKeys';
 
-type BreakableEffect = 'bounce' | 'paper' | 'spin' | 'boost' | 'final';
 type ParticleKind = 'coin' | 'debris' | 'paper' | 'hit';
 
 interface CircleBody {
@@ -15,6 +20,7 @@ interface CircleBody {
   y: number;
   r: number;
 }
+
 
 interface PlayerState extends CircleBody {
   speed: number;
@@ -34,16 +40,15 @@ interface BossState extends CircleBody {
   launchedByPlayer: boolean;
 }
 
-interface BreakableObject {
-  name: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  color: number;
+interface BreakableItemState {
+  config: BreakableItemConfig;
+  sprite: Phaser.GameObjects.Image;
   broken: boolean;
-  effect: BreakableEffect;
   respawnTimer: number;
+  boundsX: number;
+  boundsY: number;
+  boundsW: number;
+  boundsH: number;
 }
 
 interface RankDefinition {
@@ -100,6 +105,12 @@ const PLAY_HEIGHT = 600;
 const GAME_DURATION = 20;
 const HEADER_HEIGHT = 55;
 
+const OFFICE_BG_WIDTH = 1448;
+const OFFICE_BG_HEIGHT = 1086;
+const OFFICE_SCALE = Math.min(PLAY_WIDTH / OFFICE_BG_WIDTH, PLAY_HEIGHT / OFFICE_BG_HEIGHT);
+const OFFICE_OFFSET_X = (PLAY_WIDTH - OFFICE_BG_WIDTH * OFFICE_SCALE) / 2;
+const OFFICE_OFFSET_Y = (PLAY_HEIGHT - OFFICE_BG_HEIGHT * OFFICE_SCALE) / 2;
+
 const ranks: RankDefinition[] = [
   { letter: 'D', title: 'DULL', threshold: 0 },
   { letter: 'C', title: 'CLEAN', threshold: 1440 },
@@ -110,21 +121,9 @@ const ranks: RankDefinition[] = [
   { letter: 'SSS', title: 'JACKPOT REVENGE', threshold: 20000 },
 ];
 
-const objectTemplates: Omit<BreakableObject, 'broken' | 'respawnTimer'>[] = [
-  { name: 'DESK', x: 390, y: 245, w: 125, h: 58, color: 0x8b5a3c, effect: 'bounce' },
-  { name: 'PRINTER', x: 710, y: 105, w: 80, h: 68, color: 0xcfd3dd, effect: 'paper' },
-  { name: 'COFFEE', x: 150, y: 455, w: 70, h: 54, color: 0x91502d, effect: 'spin' },
-  { name: 'CHAIR', x: 640, y: 425, w: 70, h: 68, color: 0x4f79c8, effect: 'boost' },
-  { name: 'LOGO', x: 800, y: 255, w: 110, h: 95, color: 0xd6bb45, effect: 'final' },
-  { name: 'KPI', x: 245, y: 105, w: 86, h: 58, color: 0x7fc97f, effect: 'paper' },
-  { name: 'FILES', x: 80, y: 235, w: 72, h: 105, color: 0xb7a57a, effect: 'bounce' },
-  { name: 'PLANT', x: 510, y: 485, w: 64, h: 64, color: 0x5aa05a, effect: 'spin' },
-];
-
 export class BossFightScene extends Phaser.Scene {
   private root?: Phaser.GameObjects.Container;
   private graphics?: Phaser.GameObjects.Graphics;
-  private hudTexts: Phaser.GameObjects.Text[] = [];
   private resultOverlay?: Phaser.GameObjects.Container;
   private rankLetter?: Phaser.GameObjects.Text;
   private rankTitle?: Phaser.GameObjects.Text;
@@ -140,12 +139,11 @@ export class BossFightScene extends Phaser.Scene {
   private bigRankTitle?: Phaser.GameObjects.Text;
   private styleTimerSlash?: Phaser.GameObjects.Rectangle;
   private titleText?: Phaser.GameObjects.Text;
-  private bossSymbol?: Phaser.GameObjects.Text;
+  private bossImage?: Phaser.GameObjects.Image;
   private countdownText?: Phaser.GameObjects.Text;
-  private objectLabels: Phaser.GameObjects.Text[] = [];
+  private breakableItems: BreakableItemState[] = [];
   private player: PlayerState = this.createInitialPlayer();
   private boss: BossState = this.createInitialBoss();
-  private objects: BreakableObject[] = this.createObjects();
   private styleState: StyleState = this.createInitialStyle();
   private touch: TouchState = this.createInitialTouch();
   private particles: ParticleState[] = [];
@@ -192,19 +190,20 @@ export class BossFightScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     const dt = Math.min(delta / 1000, 1 / 30);
     this.updateSimulation(dt);
-    this.drawArena();
+    this.drawOverlay();
     this.updateArenaText();
     this.updateHud();
   }
 
+  /* ── reset ──────────────────────────────────────────────────── */
+
   private resetRun(): void {
     this.player = this.createInitialPlayer();
     this.boss = this.createInitialBoss();
-    this.objects = this.createObjects();
     this.styleState = this.createInitialStyle();
     this.touch = this.createInitialTouch();
     this.particles = [];
-    this.floatingTexts.forEach((text) => text.label.destroy());
+    this.floatingTexts.forEach((t) => t.label.destroy());
     this.floatingTexts = [];
     this.keys.clear();
     this.mouseX = PLAY_WIDTH / 2;
@@ -226,11 +225,30 @@ export class BossFightScene extends Phaser.Scene {
     this.countdownPulse = 0;
     this.countdownFlash = 0;
     this.lastCountdownMark = null;
+
+    for (const item of this.breakableItems) {
+      item.broken = false;
+      item.respawnTimer = 0;
+      if (item.config.useAtlas) {
+        item.sprite.setTexture(OfficeAssets.textureKey, item.config.normalFrame);
+      } else {
+        item.sprite.setTexture(item.config.normalFrame);
+      }
+      this.computeItemBounds(item);
+    }
   }
+
+  /* ── display creation ───────────────────────────────────────── */
 
   private createDisplay(): void {
     this.root = this.add.container(0, 0);
+
+    this.createOfficeBackground();
+    this.createDecorations();
+    this.createBreakableSprites();
+
     this.graphics = this.add.graphics();
+    this.graphics.setDepth(200);
     this.root.add(this.graphics);
 
     this.createArenaText();
@@ -239,28 +257,97 @@ export class BossFightScene extends Phaser.Scene {
     this.createResultOverlay();
   }
 
-  private createArenaText(): void {
-    if (!this.root) {
-      return;
-    }
+  private createOfficeBackground(): void {
+    if (!this.root) return;
 
-    this.titleText = this.addText(24, 82, 'FINAL_FINAL_v12 OFFICE', 22, '#f3e6c4')
+    const bg = this.add
+      .image(OFFICE_OFFSET_X, OFFICE_OFFSET_Y, OfficeAssets.backgroundKey)
+      .setOrigin(0)
+      .setScale(OFFICE_SCALE)
+      .setDepth(0);
+
+    this.root.add(bg);
+  }
+
+  private createDecorations(): void {
+    if (!this.root) return;
+
+    for (const config of BOSS_FIGHT_DECORATIONS) {
+      const playX = config.officeX * OFFICE_SCALE + OFFICE_OFFSET_X;
+      const playY = config.officeY * OFFICE_SCALE + OFFICE_OFFSET_Y;
+      const totalScale = config.officeScale * OFFICE_SCALE;
+
+      const sprite = this.add
+        .image(playX, playY, OfficeAssets.textureKey, config.frame)
+        .setOrigin(0.5, 1)
+        .setScale(totalScale)
+        .setDepth(10 + Math.floor(playY * 0.15))
+        .setFlipX(Boolean(config.flipX));
+
+      this.root.add(sprite);
+    }
+  }
+
+  private createBreakableSprites(): void {
+    if (!this.root) return;
+
+    this.breakableItems = BOSS_FIGHT_BREAKABLES.map((config) => {
+      const playX = config.officeX * OFFICE_SCALE + OFFICE_OFFSET_X;
+      const playY = config.officeY * OFFICE_SCALE + OFFICE_OFFSET_Y;
+      const totalScale = config.officeScale * OFFICE_SCALE;
+
+      const textureKey = config.useAtlas ? OfficeAssets.textureKey : config.normalFrame;
+      const frameName = config.useAtlas ? config.normalFrame : undefined;
+
+      const sprite = this.add
+        .image(playX, playY, textureKey, frameName)
+        .setOrigin(0.5, 1)
+        .setScale(totalScale)
+        .setDepth(100 + Math.floor(playY * 0.15))
+        .setFlipX(Boolean(config.flipX));
+
+      this.root?.add(sprite);
+
+      const item: BreakableItemState = {
+        config,
+        sprite,
+        broken: false,
+        respawnTimer: 0,
+        boundsX: 0,
+        boundsY: 0,
+        boundsW: 0,
+        boundsH: 0,
+      };
+
+      this.computeItemBounds(item);
+      return item;
+    });
+  }
+
+  private computeItemBounds(item: BreakableItemState): void {
+    const dw = item.sprite.width * item.sprite.scaleX;
+    const dh = item.sprite.height * item.sprite.scaleY;
+    item.boundsX = item.sprite.x - dw / 2;
+    item.boundsY = item.sprite.y - dh;
+    item.boundsW = dw;
+    item.boundsH = dh;
+  }
+
+  private createArenaText(): void {
+    if (!this.root) return;
+
+    this.titleText = this.addText(24, 82, 'RAGE ROOM', 22, '#f3e6c4')
       .setFontStyle('700')
       .setOrigin(0, 0.5);
     this.root.add(this.titleText);
 
-    this.objectLabels = this.objects.map((object) => {
-      const label = this.addText(object.x + object.w / 2, object.y + object.h / 2 + 5, object.name, 13, '#15151c')
-        .setFontStyle('700')
-        .setOrigin(0.5);
-      this.root?.add(label);
-      return label;
-    });
-
-    this.bossSymbol = this.addText(this.boss.x, this.boss.y + 1, '$', 19, '#111111')
-      .setFontStyle('700')
-      .setOrigin(0.5);
-    this.root.add(this.bossSymbol);
+    const bossDiameter = this.boss.r * 2;
+    this.bossImage = this.add
+      .image(this.boss.x, this.boss.y, OfficeAssets.bossKey)
+      .setOrigin(0.5)
+      .setDisplaySize(bossDiameter, bossDiameter)
+      .setDepth(150);
+    this.root.add(this.bossImage);
 
     this.countdownText = this.addText(PLAY_WIDTH / 2, 88, '', 58, '#fff2a8')
       .setFontStyle('900')
@@ -271,9 +358,7 @@ export class BossFightScene extends Phaser.Scene {
   }
 
   private createHud(): void {
-    if (!this.root) {
-      return;
-    }
+    if (!this.root) return;
 
     this.rankLetter = this.addText(24, 8, 'D', 38, '#fff2a8').setFontStyle('900').setOrigin(0, 0);
     this.rankTitle = this.addText(94, 11, 'DULL', 15, '#ffffff').setFontStyle('700').setOrigin(0, 0);
@@ -305,9 +390,7 @@ export class BossFightScene extends Phaser.Scene {
   }
 
   private createBigRankDisplay(): void {
-    if (!this.root) {
-      return;
-    }
+    if (!this.root) return;
 
     this.bigRankText = this.addText(PLAY_WIDTH - 112, 98, 'D', 94, '#ffffff')
       .setFontFamily('Impact, Arial Black, Arial, sans-serif')
@@ -326,13 +409,13 @@ export class BossFightScene extends Phaser.Scene {
   }
 
   private createResultOverlay(): void {
-    if (!this.root) {
-      return;
-    }
+    if (!this.root) return;
 
     const overlay = this.add.container(0, 0).setVisible(false);
     const shade = this.add.rectangle(0, 0, PLAY_WIDTH, PLAY_HEIGHT, 0x070710, 0.86).setOrigin(0);
-    const card = this.add.rectangle(PLAY_WIDTH / 2, PLAY_HEIGHT / 2, 500, 260, 0xf8f5f0).setStrokeStyle(4, 0xf2c14e);
+    const card = this.add
+      .rectangle(PLAY_WIDTH / 2, PLAY_HEIGHT / 2, 500, 260, 0xf8f5f0)
+      .setStrokeStyle(4, 0xf2c14e);
     const title = this.addText(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 - 84, 'RAGE RELEASED', 36, '#101820')
       .setFontStyle('900')
       .setOrigin(0.5);
@@ -340,9 +423,9 @@ export class BossFightScene extends Phaser.Scene {
     summary.setName('boss-result-summary');
     const detail = this.addText(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 + 28, '', 17, '#334155').setOrigin(0.5);
     detail.setName('boss-result-detail');
-    const button = this.add.rectangle(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 + 88, 238, 48, 0xf2c14e).setInteractive({
-      useHandCursor: true,
-    });
+    const button = this.add
+      .rectangle(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 + 88, 238, 48, 0xf2c14e)
+      .setInteractive({ useHandCursor: true });
     const buttonText = this.addText(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 + 88, 'Back to Workday', 18, '#101820')
       .setFontStyle('700')
       .setOrigin(0.5);
@@ -355,6 +438,8 @@ export class BossFightScene extends Phaser.Scene {
     this.resultOverlay = overlay;
     this.root.add(overlay);
   }
+
+  /* ── input ──────────────────────────────────────────────────── */
 
   private bindInput(): void {
     this.input.addPointer(2);
@@ -390,9 +475,7 @@ export class BossFightScene extends Phaser.Scene {
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
-    if (this.isComplete) {
-      return;
-    }
+    if (this.isComplete) return;
 
     const point = this.toPlayPoint(pointer.x, pointer.y);
     this.mouseX = point.x;
@@ -436,6 +519,8 @@ export class BossFightScene extends Phaser.Scene {
     }
   }
 
+  /* ── layout ─────────────────────────────────────────────────── */
+
   private layout(): void {
     const width = this.scale.width;
     const height = this.scale.height;
@@ -444,6 +529,8 @@ export class BossFightScene extends Phaser.Scene {
     this.playY = (height - PLAY_HEIGHT * this.playScale) / 2;
     this.root?.setPosition(this.playX, this.playY).setScale(this.playScale);
   }
+
+  /* ── simulation ─────────────────────────────────────────────── */
 
   private updateSimulation(dt: number): void {
     if (this.hitPause > 0) {
@@ -477,7 +564,7 @@ export class BossFightScene extends Phaser.Scene {
 
     this.updatePlayer(dt);
     this.updateBoss(dt);
-    this.updateObjects(dt);
+    this.updateItems(dt);
     if (!this.isComplete) {
       this.updateStyle(dt);
     }
@@ -494,18 +581,10 @@ export class BossFightScene extends Phaser.Scene {
     let mx = 0;
     let my = 0;
 
-    if (this.keys.has('w') || this.keys.has('arrowup')) {
-      my -= 1;
-    }
-    if (this.keys.has('s') || this.keys.has('arrowdown')) {
-      my += 1;
-    }
-    if (this.keys.has('a') || this.keys.has('arrowleft')) {
-      mx -= 1;
-    }
-    if (this.keys.has('d') || this.keys.has('arrowright')) {
-      mx += 1;
-    }
+    if (this.keys.has('w') || this.keys.has('arrowup')) my -= 1;
+    if (this.keys.has('s') || this.keys.has('arrowdown')) my += 1;
+    if (this.keys.has('a') || this.keys.has('arrowleft')) mx -= 1;
+    if (this.keys.has('d') || this.keys.has('arrowright')) mx += 1;
     if (this.touch.moveActive) {
       mx += this.touch.moveX;
       my += this.touch.moveY;
@@ -560,24 +639,58 @@ export class BossFightScene extends Phaser.Scene {
     this.resolveWallBounce();
   }
 
-  private updateObjects(dt: number): void {
-    for (const object of this.objects) {
-      if (object.broken) {
-        object.respawnTimer = Math.max(0, object.respawnTimer - dt);
-        if (object.respawnTimer <= 0 && !this.circleRectCollision(this.boss, object)) {
-          object.broken = false;
-          this.addFloatingText('RESPAWN!', object.x + object.w / 2, object.y + object.h / 2, 18, 0.65);
+  private updateItems(dt: number): void {
+    // Respawn broken items
+    for (const item of this.breakableItems) {
+      if (item.broken) {
+        item.respawnTimer = Math.max(0, item.respawnTimer - dt);
+        if (
+          item.respawnTimer <= 0 &&
+          !this.circleRectCollision(
+            this.boss.x,
+            this.boss.y,
+            this.boss.r,
+            item.boundsX,
+            item.boundsY,
+            item.boundsW,
+            item.boundsH,
+          )
+        ) {
+          item.broken = false;
+          if (item.config.useAtlas) {
+            item.sprite.setTexture(OfficeAssets.textureKey, item.config.normalFrame);
+          } else {
+            item.sprite.setTexture(item.config.normalFrame);
+          }
+          this.computeItemBounds(item);
+          this.addFloatingText(
+            'RESPAWN!',
+            item.boundsX + item.boundsW / 2,
+            item.boundsY + item.boundsH / 2,
+            18,
+            0.65,
+          );
         }
       }
     }
 
+    // Breakable collisions
     const bossSpeed = Math.hypot(this.boss.vx, this.boss.vy);
-    for (const object of this.objects) {
-      if (!object.broken && this.circleRectCollision(this.boss, object)) {
+    for (const item of this.breakableItems) {
+      if (
+        !item.broken &&
+        this.circleRectCollision(
+          this.boss.x,
+          this.boss.y,
+          this.boss.r,
+          item.boundsX,
+          item.boundsY,
+          item.boundsW,
+          item.boundsH,
+        )
+      ) {
         if (this.boss.launchedByPlayer && bossSpeed > 130) {
-          this.breakObject(object);
-        } else {
-          this.pushBossOutOfObject(object);
+          this.breakItem(item);
         }
       }
     }
@@ -586,9 +699,7 @@ export class BossFightScene extends Phaser.Scene {
   private updateStyle(dt: number): void {
     if (this.comboTimer > 0) {
       this.comboTimer -= dt;
-      if (this.comboTimer <= 0) {
-        this.combo = 0;
-      }
+      if (this.comboTimer <= 0) this.combo = 0;
     }
 
     if (this.styleState.timer > 0) {
@@ -605,49 +716,40 @@ export class BossFightScene extends Phaser.Scene {
 
     if (this.styleState.multiplierTimer > 0) {
       this.styleState.multiplierTimer -= dt;
-      if (this.styleState.multiplierTimer <= 0) {
-        this.styleState.multiplier = 1;
-      }
+      if (this.styleState.multiplierTimer <= 0) this.styleState.multiplier = 1;
     }
 
     this.styleState.superPunchTimer = Math.max(0, this.styleState.superPunchTimer - dt);
   }
 
   private updateParticles(dt: number): void {
-    for (const particle of this.particles) {
-      particle.x += particle.vx * dt;
-      particle.y += particle.vy * dt;
-      particle.vx *= Math.pow(0.12, dt);
-      particle.vy *= Math.pow(0.12, dt);
-      particle.life -= dt;
+    for (const p of this.particles) {
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= Math.pow(0.12, dt);
+      p.vy *= Math.pow(0.12, dt);
+      p.life -= dt;
     }
-
-    this.particles = this.particles.filter((particle) => particle.life > 0);
+    this.particles = this.particles.filter((p) => p.life > 0);
   }
 
   private updateFloatingTexts(dt: number): void {
-    for (const floatingText of this.floatingTexts) {
-      floatingText.label.y += floatingText.vy * dt;
-      floatingText.life -= dt;
-      floatingText.label.setAlpha(Phaser.Math.Clamp(floatingText.life / floatingText.maxLife, 0, 1));
+    for (const ft of this.floatingTexts) {
+      ft.label.y += ft.vy * dt;
+      ft.life -= dt;
+      ft.label.setAlpha(Phaser.Math.Clamp(ft.life / ft.maxLife, 0, 1));
     }
-
-    const aliveTexts = this.floatingTexts.filter((floatingText) => {
-      if (floatingText.life > 0) {
-        return true;
-      }
-
-      floatingText.label.destroy();
+    this.floatingTexts = this.floatingTexts.filter((ft) => {
+      if (ft.life > 0) return true;
+      ft.label.destroy();
       return false;
     });
-
-    this.floatingTexts = aliveTexts;
   }
 
+  /* ── punch & break ──────────────────────────────────────────── */
+
   private punchBoss(): void {
-    if (this.isComplete) {
-      return;
-    }
+    if (this.isComplete) return;
 
     const distanceToBoss = this.distance(this.player, this.boss);
     const punchRange = 125;
@@ -698,29 +800,38 @@ export class BossFightScene extends Phaser.Scene {
     this.hitPause = 0.045;
     this.addParticles(this.boss.x, this.boss.y, 14, 170, 'hit');
     this.addStyle(125 + this.combo * 28, chargeSeconds > 0.75 ? 'CHARGED HIT' : 'HIT');
-    this.addFloatingText(chargeSeconds > 0.75 ? 'BIG HIT!' : 'PUNCH!', this.boss.x, this.boss.y - 34, chargeSeconds > 0.75 ? 26 : 24);
+    this.addFloatingText(
+      chargeSeconds > 0.75 ? 'BIG HIT!' : 'PUNCH!',
+      this.boss.x,
+      this.boss.y - 34,
+      chargeSeconds > 0.75 ? 26 : 24,
+    );
   }
 
-  private breakObject(object: BreakableObject): void {
-    if (object.broken || this.isComplete) {
-      return;
-    }
+  private breakItem(item: BreakableItemState): void {
+    if (item.broken || this.isComplete) return;
 
-    object.broken = true;
-    object.respawnTimer = 1.15;
+    item.broken = true;
+    item.respawnTimer = 1.15;
     this.totalBreaks += 1;
     this.hitPause = 0.06;
     this.shake = Math.max(this.shake, 18);
     this.flash = Math.max(this.flash, 0.12);
 
-    const centerX = object.x + object.w / 2;
-    const centerY = object.y + object.h / 2;
-    const particleKind: ParticleKind = object.name === 'PRINTER' || object.name === 'KPI' ? 'paper' : 'debris';
-    this.addParticles(centerX, centerY, 40, 310, particleKind);
+    // Swap sprite to broken frame
+    if (item.config.useAtlas) {
+      item.sprite.setTexture(OfficeAssets.textureKey, item.config.brokenFrame);
+    } else {
+      item.sprite.setTexture(item.config.brokenFrame);
+    }
+    this.computeItemBounds(item);
+
+    const centerX = item.boundsX + item.boundsW / 2;
+    const centerY = item.boundsY + item.boundsH / 2;
+    this.addParticles(centerX, centerY, 40, 310, 'debris');
     this.combo += 1;
     this.comboTimer = 2.35;
-    this.addStyle(460, 'SMASH', centerX, object.y - 12);
-    this.payoutObjectText(object, centerX, centerY);
+    this.addStyle(item.config.tier, 'SMASH', centerX, item.boundsY - 12);
 
     if (this.combo >= 3) {
       this.payoutBurst(`BIG WIN COMBO x${this.combo}!`, PLAY_WIDTH / 2, 205, true);
@@ -731,52 +842,12 @@ export class BossFightScene extends Phaser.Scene {
       this.styleState.multiplier = 1.25;
       this.styleState.multiplierTimer = 3.0;
     }
-
-    if (object.effect === 'boost') {
-      this.boss.vx *= 1.5;
-      this.boss.vy *= 1.5;
-    }
-
-    if (object.effect === 'spin') {
-      this.boss.spin = 1.1;
-      const previousVx = this.boss.vx;
-      const previousVy = this.boss.vy;
-      const velocityLength = this.length(previousVx, previousVy);
-      this.boss.vx = (-previousVy / velocityLength) * 390;
-      this.boss.vy = (previousVx / velocityLength) * 390;
-    }
-
-    if (this.boss.x < object.x || this.boss.x > object.x + object.w) {
-      this.boss.vx *= -0.82;
-    } else {
-      this.boss.vy *= -0.82;
-    }
-
-    this.boss.vx += (Math.random() - 0.5) * 150;
-    this.boss.vy += (Math.random() - 0.5) * 150;
-    this.boss.launchedTimer = 1.4;
-    this.boss.launchedByPlayer = true;
   }
 
-  private payoutObjectText(object: BreakableObject, centerX: number, centerY: number): void {
-    const labelByName: Record<string, string> = {
-      DESK: 'DESK SMASH!',
-      PRINTER: 'PAPER EXPLOSION!',
-      COFFEE: 'COFFEE CHAOS!',
-      CHAIR: 'CHAIR BOOST!',
-      LOGO: 'COMPANY LOGO CRUSH!',
-      KPI: 'KPI DESTROYED!',
-      FILES: 'FILE CABINET BURST!',
-      PLANT: 'PLANT SPLAT!',
-    };
-
-    this.payoutBurst(labelByName[object.name] ?? 'SMASH!', centerX, centerY - 35, object.name === 'LOGO');
-  }
+  /* ── end & resolve ──────────────────────────────────────────── */
 
   private endRun(): void {
-    if (this.isComplete) {
-      return;
-    }
+    if (this.isComplete) return;
 
     this.countdownBurst('TIME UP!');
     this.isComplete = true;
@@ -793,9 +864,7 @@ export class BossFightScene extends Phaser.Scene {
   }
 
   private resolveBossFightState(): void {
-    if (this.hasResolvedState) {
-      return;
-    }
+    if (this.hasResolvedState) return;
 
     const state = GameState.data;
     const score = Math.round(this.styleState.score);
@@ -809,9 +878,7 @@ export class BossFightScene extends Phaser.Scene {
 
   private showResultOverlay(): void {
     const overlay = this.resultOverlay;
-    if (!overlay) {
-      return;
-    }
+    if (!overlay) return;
 
     const rank = ranks[this.styleState.rankIndex];
     const score = Math.round(this.styleState.score);
@@ -828,6 +895,8 @@ export class BossFightScene extends Phaser.Scene {
     const restoreRatio = Phaser.Math.Clamp(score / maxScore, 0, 1);
     return Math.round(restoreRatio * BalanceConfig.maxSanity);
   }
+
+  /* ── wall bounce ────────────────────────────────────────────── */
 
   private resolveWallBounce(): void {
     const speedBeforeWall = Math.hypot(this.boss.vx, this.boss.vy);
@@ -854,9 +923,7 @@ export class BossFightScene extends Phaser.Scene {
       wallBounced = true;
     }
 
-    if (!wallBounced) {
-      return;
-    }
+    if (!wallBounced) return;
 
     this.shake = Math.max(this.shake, 6);
     this.addParticles(this.boss.x, this.boss.y, 7, 120, 'hit');
@@ -867,17 +934,7 @@ export class BossFightScene extends Phaser.Scene {
     }
   }
 
-  private pushBossOutOfObject(object: BreakableObject): void {
-    const centerX = object.x + object.w / 2;
-    const centerY = object.y + object.h / 2;
-    const dx = this.boss.x - centerX;
-    const dy = this.boss.y - centerY;
-    const pushLength = this.length(dx, dy);
-    this.boss.x += (dx / pushLength) * 12;
-    this.boss.y += (dy / pushLength) * 12;
-    this.boss.vx += (dx / pushLength) * 95;
-    this.boss.vy += (dy / pushLength) * 95;
-  }
+  /* ── style system ───────────────────────────────────────────── */
 
   private addStyle(points: number, label: string, x = this.boss.x, y = this.boss.y - 48): void {
     const realPoints = Math.round(points * this.styleState.multiplier);
@@ -927,15 +984,12 @@ export class BossFightScene extends Phaser.Scene {
     this.addParticles(PLAY_WIDTH / 2, 42, value === 'TIME UP!' ? 34 : 14, value === 'TIME UP!' ? 220 : 130, 'coin');
   }
 
-  private addFloatingText(text: string, x: number, y: number, size = 28, life = 1): void {
-    if (!this.root) {
-      return;
-    }
+  /* ── floating text & particles ──────────────────────────────── */
 
-    const label = this.addText(x, y, text, size, '#fff2a8')
-      .setFontStyle('900')
-      .setOrigin(0.5)
-      .setStroke('#000000', 5);
+  private addFloatingText(text: string, x: number, y: number, size = 28, life = 1): void {
+    if (!this.root) return;
+
+    const label = this.addText(x, y, text, size, '#fff2a8').setFontStyle('900').setOrigin(0.5).setStroke('#000000', 5);
     this.root.add(label);
     this.floatingTexts.push({ label, vy: -48, life, maxLife: life });
   }
@@ -956,202 +1010,188 @@ export class BossFightScene extends Phaser.Scene {
     }
   }
 
-  private drawArena(): void {
-    if (!this.graphics) {
-      return;
-    }
+  /* ── drawing ────────────────────────────────────────────────── */
+
+  private drawOverlay(): void {
+    if (!this.graphics) return;
 
     const offsetX = this.shake > 0 ? (Math.random() - 0.5) * this.shake : 0;
     const offsetY = this.shake > 0 ? (Math.random() - 0.5) * this.shake : 0;
-    const graphics = this.graphics;
-    graphics.clear();
-    graphics.save();
-    graphics.translateCanvas(offsetX, offsetY);
-    this.drawRoom(graphics);
-    this.drawObjects(graphics);
-    this.drawParticles(graphics);
-    this.drawAimLine(graphics);
-    this.drawTouchJoystick(graphics);
-    this.drawPlayer(graphics);
-    this.drawBoss(graphics);
-    this.drawCountdown(graphics);
-    this.drawFlashes(graphics);
-    graphics.restore();
+    const g = this.graphics;
+    g.clear();
+    g.save();
+    g.translateCanvas(offsetX, offsetY);
+    this.drawHeaderAndBorder(g);
+    this.drawParticles(g);
+    this.drawAimLine(g);
+    this.drawTouchJoystick(g);
+    this.drawPlayer(g);
+    this.drawBoss(g);
+    this.drawCountdown(g);
+    this.drawFlashes(g);
+    g.restore();
   }
 
-  private drawRoom(graphics: Phaser.GameObjects.Graphics): void {
-    graphics.fillStyle(0x2b2b35, 1);
-    graphics.fillRect(0, 0, PLAY_WIDTH, PLAY_HEIGHT);
-    graphics.fillStyle(0x383845, 1);
-
-    for (let x = 0; x < PLAY_WIDTH; x += 80) {
-      graphics.fillRect(x, HEADER_HEIGHT, 3, PLAY_HEIGHT - HEADER_HEIGHT);
-    }
-    for (let y = HEADER_HEIGHT; y < PLAY_HEIGHT; y += 80) {
-      graphics.fillRect(0, y, PLAY_WIDTH, 3);
-    }
-
-    graphics.fillStyle(0x20202a, 1);
-    graphics.fillRect(0, 0, PLAY_WIDTH, HEADER_HEIGHT);
-    graphics.lineStyle(4, 0xf3e6c4, 1);
-    graphics.strokeRect(0, 0, PLAY_WIDTH, PLAY_HEIGHT);
+  private drawHeaderAndBorder(g: Phaser.GameObjects.Graphics): void {
+    g.fillStyle(0x15151c, 0.88);
+    g.fillRect(0, 0, PLAY_WIDTH, HEADER_HEIGHT);
+    g.lineStyle(4, 0xf3e6c4, 1);
+    g.strokeRect(0, 0, PLAY_WIDTH, PLAY_HEIGHT);
   }
 
-  private drawObjects(graphics: Phaser.GameObjects.Graphics): void {
-    for (const object of this.objects) {
-      if (object.broken) {
-        graphics.fillStyle(0x5b4b4b, 0.35);
-        graphics.lineStyle(3, 0x1b1b1b, 1);
-        graphics.fillRoundedRect(object.x, object.y, object.w, object.h, 8);
-        graphics.strokeRoundedRect(object.x, object.y, object.w, object.h, 8);
-        continue;
-      }
-
-      graphics.fillStyle(object.color, 1);
-      graphics.lineStyle(3, 0x111111, 1);
-      graphics.fillRoundedRect(object.x, object.y, object.w, object.h, 10);
-      graphics.strokeRoundedRect(object.x, object.y, object.w, object.h, 10);
-    }
-  }
-
-  private drawParticles(graphics: Phaser.GameObjects.Graphics): void {
-    for (const particle of this.particles) {
-      const color = particle.kind === 'coin' ? 0xfff2a8 : particle.kind === 'debris' ? 0xd6b58a : 0xfff0c7;
-      graphics.fillStyle(color, Math.max(0, particle.life));
-
-      if (particle.kind === 'coin') {
-        graphics.fillCircle(particle.x, particle.y, particle.radius);
+  private drawParticles(g: Phaser.GameObjects.Graphics): void {
+    for (const p of this.particles) {
+      const color = p.kind === 'coin' ? 0xfff2a8 : p.kind === 'debris' ? 0xd6b58a : 0xfff0c7;
+      g.fillStyle(color, Math.max(0, p.life));
+      if (p.kind === 'coin') {
+        g.fillCircle(p.x, p.y, p.radius);
       } else {
-        graphics.fillRect(particle.x, particle.y, particle.radius * 2, particle.radius);
+        g.fillRect(p.x, p.y, p.radius * 2, p.radius);
       }
     }
   }
 
-  private drawAimLine(graphics: Phaser.GameObjects.Graphics): void {
-    if (!this.mouseDown || this.isComplete) {
-      return;
-    }
+  private drawAimLine(g: Phaser.GameObjects.Graphics): void {
+    if (!this.mouseDown || this.isComplete) return;
 
     const charge = Phaser.Math.Clamp((this.time.now - this.chargeStart) / 1000, 0, 1.15);
     const dx = this.mouseX - this.player.x;
     const dy = this.mouseY - this.player.y;
-    const aimLength = this.length(dx, dy);
-    const aimX = dx / aimLength;
-    const aimY = dy / aimLength;
+    const aimLen = this.length(dx, dy);
+    const aimX = dx / aimLen;
+    const aimY = dy / aimLen;
     const color = this.styleState.superPunchTimer > 0 ? 0xfff2a8 : 0xffffff;
 
-    graphics.lineStyle(5 + charge * 5, color, 1);
-    graphics.beginPath();
-    graphics.moveTo(this.player.x, this.player.y);
-    graphics.lineTo(this.player.x + aimX * (75 + charge * 70), this.player.y + aimY * (75 + charge * 70));
-    graphics.strokePath();
-    graphics.fillStyle(color, 1);
-    graphics.fillCircle(this.player.x + aimX * (80 + charge * 70), this.player.y + aimY * (80 + charge * 70), 8 + charge * 5);
+    g.lineStyle(5 + charge * 5, color, 1);
+    g.beginPath();
+    g.moveTo(this.player.x, this.player.y);
+    g.lineTo(
+      this.player.x + aimX * (75 + charge * 70),
+      this.player.y + aimY * (75 + charge * 70),
+    );
+    g.strokePath();
+    g.fillStyle(color, 1);
+    g.fillCircle(
+      this.player.x + aimX * (80 + charge * 70),
+      this.player.y + aimY * (80 + charge * 70),
+      8 + charge * 5,
+    );
   }
 
-  private drawTouchJoystick(graphics: Phaser.GameObjects.Graphics): void {
-    if (!this.touch.moveActive) {
-      return;
-    }
+  private drawTouchJoystick(g: Phaser.GameObjects.Graphics): void {
+    if (!this.touch.moveActive) return;
 
-    graphics.lineStyle(4, 0xffffff, 0.32);
-    graphics.strokeCircle(this.touch.joyStartX, this.touch.joyStartY, 55);
-    graphics.fillStyle(0xffffff, 0.32);
-    graphics.fillCircle(this.touch.joyStartX + this.touch.moveX * 45, this.touch.joyStartY + this.touch.moveY * 45, 18);
+    g.lineStyle(4, 0xffffff, 0.32);
+    g.strokeCircle(this.touch.joyStartX, this.touch.joyStartY, 55);
+    g.fillStyle(0xffffff, 0.32);
+    g.fillCircle(
+      this.touch.joyStartX + this.touch.moveX * 45,
+      this.touch.joyStartY + this.touch.moveY * 45,
+      18,
+    );
   }
 
-  private drawPlayer(graphics: Phaser.GameObjects.Graphics): void {
-    graphics.fillStyle(0x6ee7ff, 1);
-    graphics.lineStyle(4, 0x111111, 1);
-    graphics.fillCircle(this.player.x, this.player.y, this.player.r);
-    graphics.strokeCircle(this.player.x, this.player.y, this.player.r);
-    graphics.fillStyle(0x111111, 1);
-    graphics.fillCircle(this.player.x + this.player.facingX * 8 - this.player.facingY * 4, this.player.y + this.player.facingY * 8 + this.player.facingX * 4, 3);
-    graphics.fillCircle(this.player.x + this.player.facingX * 8 + this.player.facingY * 4, this.player.y + this.player.facingY * 8 - this.player.facingX * 4, 3);
+  private drawPlayer(g: Phaser.GameObjects.Graphics): void {
+    g.fillStyle(0x6ee7ff, 1);
+    g.lineStyle(4, 0x111111, 1);
+    g.fillCircle(this.player.x, this.player.y, this.player.r);
+    g.strokeCircle(this.player.x, this.player.y, this.player.r);
+    g.fillStyle(0x111111, 1);
+    g.fillCircle(
+      this.player.x + this.player.facingX * 8 - this.player.facingY * 4,
+      this.player.y + this.player.facingY * 8 + this.player.facingX * 4,
+      3,
+    );
+    g.fillCircle(
+      this.player.x + this.player.facingX * 8 + this.player.facingY * 4,
+      this.player.y + this.player.facingY * 8 - this.player.facingX * 4,
+      3,
+    );
   }
 
-  private drawBoss(graphics: Phaser.GameObjects.Graphics): void {
+  private drawBoss(g: Phaser.GameObjects.Graphics): void {
     if (this.boss.launchedByPlayer) {
-      graphics.lineStyle(7, 0xfff2a8, 0.25 + Math.sin(this.time.now / 60) * 0.08);
-      graphics.strokeCircle(this.boss.x, this.boss.y, this.boss.r + 9);
+      g.lineStyle(7, 0xfff2a8, 0.25 + Math.sin(this.time.now / 60) * 0.08);
+      g.strokeCircle(this.boss.x, this.boss.y, this.boss.r + 9);
     }
-
-    const stretchX = 1 + this.boss.hurt * 0.8;
-    const stretchY = 1 - this.boss.hurt * 0.4;
-    graphics.save();
-    graphics.translateCanvas(this.boss.x, this.boss.y);
-    if (this.boss.spin > 0) {
-      graphics.rotateCanvas((this.time.now / 60) % (Math.PI * 2));
-    }
-    graphics.scaleCanvas(stretchX, stretchY);
-    graphics.fillStyle(this.isComplete ? 0xffb3b3 : 0xff6961, 1);
-    graphics.lineStyle(4, 0x111111, 1);
-    graphics.fillCircle(0, 0, this.boss.r);
-    graphics.strokeCircle(0, 0, this.boss.r);
-    graphics.restore();
   }
 
-  private drawCountdown(graphics: Phaser.GameObjects.Graphics): void {
-    if (!this.countdownNumber || (!this.isComplete && this.timeLeft > 5 && this.countdownPulse <= 0)) {
-      return;
-    }
+  private drawCountdown(g: Phaser.GameObjects.Graphics): void {
+    if (!this.countdownNumber || (!this.isComplete && this.timeLeft > 5 && this.countdownPulse <= 0)) return;
 
     const alpha = Phaser.Math.Clamp(this.countdownFlash, 0, 0.7);
-    graphics.fillStyle(0xff6961, alpha);
-    graphics.fillRect(0, 0, PLAY_WIDTH, PLAY_HEIGHT);
+    g.fillStyle(0xff6961, alpha);
+    g.fillRect(0, 0, PLAY_WIDTH, PLAY_HEIGHT);
   }
 
-  private drawFlashes(graphics: Phaser.GameObjects.Graphics): void {
+  private drawFlashes(g: Phaser.GameObjects.Graphics): void {
     if (this.payoutFlash > 0) {
-      graphics.lineStyle(18, 0xfff2a8, this.payoutFlash * 0.7);
-      graphics.strokeRect(12, 12, PLAY_WIDTH - 24, PLAY_HEIGHT - 24);
+      g.lineStyle(18, 0xfff2a8, this.payoutFlash * 0.7);
+      g.strokeRect(12, 12, PLAY_WIDTH - 24, PLAY_HEIGHT - 24);
     }
 
     if (this.flash > 0) {
-      graphics.fillStyle(0xfff6d6, this.flash * 3);
-      graphics.fillRect(0, 0, PLAY_WIDTH, PLAY_HEIGHT);
+      g.fillStyle(0xfff6d6, this.flash * 3);
+      g.fillRect(0, 0, PLAY_WIDTH, PLAY_HEIGHT);
     }
   }
+
+  /* ── HUD update ─────────────────────────────────────────────── */
 
   private updateHud(): void {
     const rank = ranks[this.styleState.rankIndex];
     const next = ranks[Math.min(this.styleState.rankIndex + 1, ranks.length - 1)];
     const base = rank.threshold;
     const top = next.threshold === base ? base + 1 : next.threshold;
-    const progress = this.styleState.rankIndex === ranks.length - 1 ? 1 : Phaser.Math.Clamp((this.styleState.score - base) / (top - base), 0, 1);
-    const charge = this.mouseDown ? Phaser.Math.Clamp((this.time.now - this.chargeStart) / 1000, 0, 1.15) : 0;
+    const progress =
+      this.styleState.rankIndex === ranks.length - 1
+        ? 1
+        : Phaser.Math.Clamp((this.styleState.score - base) / (top - base), 0, 1);
+    const charge = this.mouseDown
+      ? Phaser.Math.Clamp((this.time.now - this.chargeStart) / 1000, 0, 1.15)
+      : 0;
     const urgent = this.timeLeft <= 5 && !this.isComplete;
     const pop = this.styleState.rankPop;
     const pulse = 1 + Math.sin(this.time.now / 125) * 0.035 + pop * 0.28;
     const wobble = Math.sin(this.time.now / 55) * this.styleState.rankWobble * 6.3;
-    const rankSize = rank.letter.length === 3 ? 62 : rank.letter.length === 2 ? 76 : 94;
+    const rankSize =
+      rank.letter.length === 3 ? 62 : rank.letter.length === 2 ? 76 : 94;
 
     this.rankLetter?.setText(rank.letter);
-    this.rankTitle?.setText(`${rank.title}${this.styleState.multiplierTimer > 0 ? `  x${this.styleState.multiplier.toFixed(1)}` : ''}${this.styleState.superPunchTimer > 0 ? '  SUPER READY' : ''}`);
+    this.rankTitle?.setText(
+      `${rank.title}${this.styleState.multiplierTimer > 0 ? `  x${this.styleState.multiplier.toFixed(1)}` : ''}${this.styleState.superPunchTimer > 0 ? '  SUPER READY' : ''}`,
+    );
     this.styleBar?.setSize(Math.round(progress * 186), 8);
     this.timerBar?.setSize(Math.round(Phaser.Math.Clamp(this.styleState.timer / 3, 0, 1) * 78), 7);
     this.comboText?.setText(`Combo: x${this.combo}`);
     this.itemsText?.setText(`Hits: ${this.totalBreaks}`);
-    this.timeText?.setText(`Time: ${this.timeLeft <= 5 ? Math.ceil(this.timeLeft).toString() : this.timeLeft.toFixed(1)}s`);
+    this.timeText?.setText(
+      `Time: ${this.timeLeft <= 5 ? Math.ceil(this.timeLeft).toString() : this.timeLeft.toFixed(1)}s`,
+    );
     this.timeText?.setColor(urgent ? '#ff6961' : '#ffffff');
     this.timeText?.setFontStyle(urgent ? '900' : '700');
     this.chargeText?.setText(`Charge: ${Math.round((charge / 1.15) * 100)}%`);
-    this.bigRankText?.setText(rank.letter).setFontSize(rankSize).setColor(this.styleState.rankIndex >= 4 ? '#fff2a8' : '#ffffff');
+    this.bigRankText
+      ?.setText(rank.letter)
+      .setFontSize(rankSize)
+      .setColor(this.styleState.rankIndex >= 4 ? '#fff2a8' : '#ffffff');
     this.bigRankText?.setScale(pulse).setAngle(-7 + wobble);
     this.bigRankTitle?.setText(rank.title);
     this.styleTimerSlash?.setSize(90 * Phaser.Math.Clamp(this.styleState.timer / 3, 0, 1), 6);
   }
 
   private updateArenaText(): void {
-    this.objectLabels.forEach((label, index) => {
-      const object = this.objects[index];
-      label.setText(object.broken ? 'BROKEN' : object.name);
-      label.setPosition(object.x + object.w / 2, object.y + object.h / 2 + 5);
-      label.setColor(object.broken ? '#ffd37d' : '#15151c');
-      label.setFontSize(object.broken ? 11 : 13);
-    });
-
-    this.bossSymbol?.setPosition(this.boss.x, this.boss.y + 1).setVisible(true);
+    const stretchX = 1 + this.boss.hurt * 0.8;
+    const stretchY = 1 - this.boss.hurt * 0.4;
+    if (this.bossImage) {
+      const baseScale = (this.boss.r * 2) / this.bossImage.width;
+      this.bossImage
+        .setPosition(this.boss.x, this.boss.y)
+        .setScale(baseScale * stretchX, baseScale * stretchY)
+        .setRotation(this.boss.spin > 0 ? (this.time.now / 60) % (Math.PI * 2) : 0)
+        .setTint(this.isComplete ? 0xffb3b3 : 0xffffff)
+        .setVisible(true);
+    }
 
     if (this.countdownNumber && (this.countdownPulse > 0 || this.timeLeft <= 5 || this.isComplete)) {
       const scale = 1 + this.countdownPulse * 0.35;
@@ -1162,29 +1202,25 @@ export class BossFightScene extends Phaser.Scene {
     }
   }
 
-  private updateTouchMoveVector(): void {
-    const dx = this.touch.joyX - this.touch.joyStartX;
-    const dy = this.touch.joyY - this.touch.joyStartY;
-    const distance = Math.hypot(dx, dy);
-    const strength = Phaser.Math.Clamp(distance / 75, 0, 1);
+  /* ── collision ──────────────────────────────────────────────── */
 
-    if (distance < 8) {
-      this.touch.moveX = 0;
-      this.touch.moveY = 0;
-      return;
-    }
-
-    this.touch.moveX = (dx / distance) * strength;
-    this.touch.moveY = (dy / distance) * strength;
+  private circleRectCollision(
+    cx: number,
+    cy: number,
+    cr: number,
+    rx: number,
+    ry: number,
+    rw: number,
+    rh: number,
+  ): boolean {
+    const closestX = Phaser.Math.Clamp(cx, rx, rx + rw);
+    const closestY = Phaser.Math.Clamp(cy, ry, ry + rh);
+    const dx = cx - closestX;
+    const dy = cy - closestY;
+    return dx * dx + dy * dy < cr * cr;
   }
 
-  private circleRectCollision(circle: CircleBody, rectangle: BreakableObject): boolean {
-    const closestX = Phaser.Math.Clamp(circle.x, rectangle.x, rectangle.x + rectangle.w);
-    const closestY = Phaser.Math.Clamp(circle.y, rectangle.y, rectangle.y + rectangle.h);
-    const dx = circle.x - closestX;
-    const dy = circle.y - closestY;
-    return dx * dx + dy * dy < circle.r * circle.r;
-  }
+  /* ── coordinate transform ──────────────────────────────────── */
 
   private toPlayPoint(screenX: number, screenY: number): Phaser.Math.Vector2 {
     return new Phaser.Math.Vector2(
@@ -1193,7 +1229,15 @@ export class BossFightScene extends Phaser.Scene {
     );
   }
 
-  private addText(x: number, y: number, text: string, size: number, color: string): Phaser.GameObjects.Text {
+  /* ── utilities ─────────────────────────────────────────────── */
+
+  private addText(
+    x: number,
+    y: number,
+    text: string,
+    size: number,
+    color: string,
+  ): Phaser.GameObjects.Text {
     return this.add.text(x, y, text, {
       fontFamily: 'Arial, sans-serif',
       fontSize: `${size}px`,
@@ -1204,9 +1248,7 @@ export class BossFightScene extends Phaser.Scene {
   private getRankIndex(score: number): number {
     let index = 0;
     for (let i = 0; i < ranks.length; i += 1) {
-      if (score >= ranks[i].threshold) {
-        index = i;
-      }
+      if (score >= ranks[i].threshold) index = i;
     }
     return index;
   }
@@ -1219,15 +1261,10 @@ export class BossFightScene extends Phaser.Scene {
     return Math.hypot(a.x - b.x, a.y - b.y);
   }
 
+  /* ── initial state factories ───────────────────────────────── */
+
   private createInitialPlayer(): PlayerState {
-    return {
-      x: 220,
-      y: 300,
-      r: 18,
-      speed: 320,
-      facingX: 1,
-      facingY: 0,
-    };
+    return { x: 220, y: 300, r: 18, speed: 320, facingX: 1, facingY: 0 };
   }
 
   private createInitialBoss(): BossState {
@@ -1277,13 +1314,23 @@ export class BossFightScene extends Phaser.Scene {
     };
   }
 
-  private createObjects(): BreakableObject[] {
-    return objectTemplates.map((object) => ({
-      ...object,
-      broken: false,
-      respawnTimer: 0,
-    }));
+  private updateTouchMoveVector(): void {
+    const dx = this.touch.joyX - this.touch.joyStartX;
+    const dy = this.touch.joyY - this.touch.joyStartY;
+    const dist = Math.hypot(dx, dy);
+    const strength = Phaser.Math.Clamp(dist / 75, 0, 1);
+
+    if (dist < 8) {
+      this.touch.moveX = 0;
+      this.touch.moveY = 0;
+      return;
+    }
+
+    this.touch.moveX = (dx / dist) * strength;
+    this.touch.moveY = (dy / dist) * strength;
   }
+
+  /* ── cleanup ───────────────────────────────────────────────── */
 
   private cleanup(): void {
     this.scale.off('resize', this.layout, this);
@@ -1293,11 +1340,7 @@ export class BossFightScene extends Phaser.Scene {
     this.input.off('pointerupoutside', this.handlePointerUp, this);
     this.input.keyboard?.off('keydown', this.handleKeyDown, this);
     this.input.keyboard?.off('keyup', this.handleKeyUp, this);
-    this.floatingTexts.forEach((text) => text.label.destroy());
+    this.floatingTexts.forEach((t) => t.label.destroy());
     this.floatingTexts = [];
-    this.hudTexts.forEach((text) => text.destroy());
-    this.hudTexts = [];
-    this.objectLabels.forEach((text) => text.destroy());
-    this.objectLabels = [];
   }
 }
