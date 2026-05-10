@@ -1,0 +1,671 @@
+{
+  "source_image": "image(30).png",
+  "background_removed_rgb": [
+    219,
+    94,
+    165
+  ],
+  "cleanup": "near-magenta color-key removal, flood-filled border background removal, transparent RGB zeroed to prevent pink halos in engines",
+  "sprites": {
+    "door_mat_01": {
+      "file": "01_door_mat_01.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        40,
+        92,
+        86,
+        229
+      ],
+      "spritesheet_bbox": [
+        8,
+        8,
+        46,
+        137
+      ],
+      "size": [
+        46,
+        137
+      ],
+      "cleaned_file": "01_door_mat_01.png"
+    },
+    "tall_potted_plant": {
+      "file": "02_tall_potted_plant.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        133,
+        167,
+        188,
+        270
+      ],
+      "spritesheet_bbox": [
+        62,
+        8,
+        55,
+        103
+      ],
+      "size": [
+        55,
+        103
+      ],
+      "cleaned_file": "02_tall_potted_plant.png"
+    },
+    "coffee_station_table": {
+      "file": "03_coffee_station_table.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        234,
+        128,
+        341,
+        215
+      ],
+      "spritesheet_bbox": [
+        125,
+        8,
+        107,
+        87
+      ],
+      "size": [
+        107,
+        87
+      ],
+      "cleaned_file": "03_coffee_station_table.png"
+    },
+    "cardboard_stack_large": {
+      "file": "04_cardboard_stack_large.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        415,
+        121,
+        482,
+        200
+      ],
+      "spritesheet_bbox": [
+        240,
+        8,
+        67,
+        79
+      ],
+      "size": [
+        67,
+        79
+      ],
+      "cleaned_file": "04_cardboard_stack_large.png"
+    },
+    "small_potted_cactus": {
+      "file": "05_small_potted_cactus.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        529,
+        142,
+        557,
+        185
+      ],
+      "spritesheet_bbox": [
+        315,
+        8,
+        28,
+        43
+      ],
+      "size": [
+        28,
+        43
+      ],
+      "cleaned_file": "05_small_potted_cactus.png"
+    },
+    "large_potted_plant": {
+      "file": "06_large_potted_plant.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        604,
+        138,
+        657,
+        225
+      ],
+      "spritesheet_bbox": [
+        351,
+        8,
+        53,
+        87
+      ],
+      "size": [
+        53,
+        87
+      ],
+      "cleaned_file": "06_large_potted_plant.png"
+    },
+    "paper_shredder": {
+      "file": "07_paper_shredder.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        703,
+        152,
+        775,
+        236
+      ],
+      "spritesheet_bbox": [
+        412,
+        8,
+        72,
+        84
+      ],
+      "size": [
+        72,
+        84
+      ],
+      "cleaned_file": "07_paper_shredder.png"
+    },
+    "water_cooler": {
+      "file": "08_water_cooler.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        911,
+        107,
+        957,
+        188
+      ],
+      "spritesheet_bbox": [
+        492,
+        8,
+        46,
+        81
+      ],
+      "size": [
+        46,
+        81
+      ],
+      "cleaned_file": "08_water_cooler.png"
+    },
+    "water_cooler_broken": {
+      "file": "09_water_cooler_broken.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        958,
+        107,
+        1045,
+        223
+      ],
+      "spritesheet_bbox": [
+        546,
+        8,
+        87,
+        116
+      ],
+      "size": [
+        87,
+        116
+      ],
+      "cleaned_file": "09_water_cooler_broken.png"
+    },
+    "door_mat_02": {
+      "file": "10_door_mat_02.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        51,
+        306,
+        95,
+        441
+      ],
+      "spritesheet_bbox": [
+        641,
+        8,
+        44,
+        135
+      ],
+      "size": [
+        44,
+        135
+      ],
+      "cleaned_file": "10_door_mat_02.png"
+    },
+    "low_cabinet_with_plant": {
+      "file": "11_low_cabinet_with_plant.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        156,
+        325,
+        254,
+        404
+      ],
+      "spritesheet_bbox": [
+        693,
+        8,
+        98,
+        79
+      ],
+      "size": [
+        98,
+        79
+      ],
+      "cleaned_file": "11_low_cabinet_with_plant.png"
+    },
+    "file_cabinet_single_01": {
+      "file": "12_file_cabinet_single_01.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        317,
+        317,
+        379,
+        412
+      ],
+      "spritesheet_bbox": [
+        799,
+        8,
+        62,
+        95
+      ],
+      "size": [
+        62,
+        95
+      ],
+      "cleaned_file": "12_file_cabinet_single_01.png"
+    },
+    "file_cabinet_single_02": {
+      "file": "13_file_cabinet_single_02.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        356,
+        317,
+        429,
+        412
+      ],
+      "spritesheet_bbox": [
+        869,
+        8,
+        73,
+        95
+      ],
+      "size": [
+        73,
+        95
+      ],
+      "cleaned_file": "13_file_cabinet_single_02.png"
+    },
+    "file_cabinet_single_03": {
+      "file": "14_file_cabinet_single_03.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        406,
+        317,
+        470,
+        412
+      ],
+      "spritesheet_bbox": [
+        950,
+        8,
+        64,
+        95
+      ],
+      "size": [
+        64,
+        95
+      ],
+      "cleaned_file": "14_file_cabinet_single_03.png"
+    },
+    "cardboard_stack_small": {
+      "file": "15_cardboard_stack_small.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        581,
+        313,
+        635,
+        389
+      ],
+      "spritesheet_bbox": [
+        8,
+        153,
+        54,
+        76
+      ],
+      "size": [
+        54,
+        76
+      ],
+      "cleaned_file": "15_cardboard_stack_small.png"
+    },
+    "blue_storage_unit": {
+      "file": "16_blue_storage_unit.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        706,
+        355,
+        748,
+        425
+      ],
+      "spritesheet_bbox": [
+        70,
+        153,
+        42,
+        70
+      ],
+      "size": [
+        42,
+        70
+      ],
+      "cleaned_file": "16_blue_storage_unit.png"
+    },
+    "trash_can": {
+      "file": "17_trash_can.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        970,
+        626,
+        1008,
+        671
+      ],
+      "spritesheet_bbox": [
+        120,
+        153,
+        38,
+        45
+      ],
+      "size": [
+        38,
+        45
+      ],
+      "cleaned_file": "17_trash_can.png"
+    },
+    "trash_can_broken": {
+      "file": "18_trash_can_broken.png",
+      "group": "individual",
+      "state": null,
+      "original_bbox": [
+        1019,
+        614,
+        1106,
+        676
+      ],
+      "spritesheet_bbox": [
+        166,
+        153,
+        87,
+        62
+      ],
+      "size": [
+        87,
+        62
+      ],
+      "cleaned_file": "18_trash_can_broken.png"
+    },
+    "bookcase_normal": {
+      "file": "19_bookcase_normal.png",
+      "group": "paired_state",
+      "state": "normal",
+      "original_bbox": [
+        1169,
+        72,
+        1334,
+        184
+      ],
+      "spritesheet_bbox": [
+        261,
+        153,
+        165,
+        112
+      ],
+      "size": [
+        165,
+        112
+      ],
+      "cleaned_file": "19_bookcase_normal.png"
+    },
+    "bookcase_broken": {
+      "file": "20_bookcase_broken.png",
+      "group": "paired_state",
+      "state": "broken",
+      "original_bbox": [
+        1325,
+        76,
+        1518,
+        220
+      ],
+      "spritesheet_bbox": [
+        434,
+        153,
+        193,
+        144
+      ],
+      "size": [
+        193,
+        144
+      ],
+      "cleaned_file": "20_bookcase_broken.png"
+    },
+    "storage_cabinet_normal": {
+      "file": "21_storage_cabinet_normal.png",
+      "group": "paired_state",
+      "state": "normal",
+      "original_bbox": [
+        1559,
+        80,
+        1738,
+        178
+      ],
+      "spritesheet_bbox": [
+        635,
+        153,
+        179,
+        98
+      ],
+      "size": [
+        179,
+        98
+      ],
+      "cleaned_file": "21_storage_cabinet_normal.png"
+    },
+    "storage_cabinet_broken": {
+      "file": "22_storage_cabinet_broken.png",
+      "group": "paired_state",
+      "state": "broken",
+      "original_bbox": [
+        1743,
+        80,
+        1930,
+        199
+      ],
+      "spritesheet_bbox": [
+        822,
+        153,
+        187,
+        119
+      ],
+      "size": [
+        187,
+        119
+      ],
+      "cleaned_file": "22_storage_cabinet_broken.png"
+    },
+    "double_desks_normal": {
+      "file": "23_double_desks_normal.png",
+      "group": "paired_state",
+      "state": "normal",
+      "original_bbox": [
+        1073,
+        236,
+        1258,
+        379
+      ],
+      "spritesheet_bbox": [
+        8,
+        305,
+        185,
+        143
+      ],
+      "size": [
+        185,
+        143
+      ],
+      "cleaned_file": "23_double_desks_normal.png"
+    },
+    "double_desks_broken": {
+      "file": "24_double_desks_broken.png",
+      "group": "paired_state",
+      "state": "broken",
+      "original_bbox": [
+        1380,
+        236,
+        1606,
+        388
+      ],
+      "spritesheet_bbox": [
+        201,
+        305,
+        226,
+        152
+      ],
+      "size": [
+        226,
+        152
+      ],
+      "cleaned_file": "24_double_desks_broken.png"
+    },
+    "single_desk_normal": {
+      "file": "25_single_desk_normal.png",
+      "group": "paired_state",
+      "state": "normal",
+      "original_bbox": [
+        1105,
+        417,
+        1237,
+        540
+      ],
+      "spritesheet_bbox": [
+        435,
+        305,
+        132,
+        123
+      ],
+      "size": [
+        132,
+        123
+      ],
+      "cleaned_file": "25_single_desk_normal.png"
+    },
+    "single_desk_broken": {
+      "file": "26_single_desk_broken.png",
+      "group": "paired_state",
+      "state": "broken",
+      "original_bbox": [
+        1242,
+        421,
+        1484,
+        555
+      ],
+      "spritesheet_bbox": [
+        575,
+        305,
+        242,
+        134
+      ],
+      "size": [
+        242,
+        134
+      ],
+      "cleaned_file": "26_single_desk_broken.png"
+    },
+    "copier_normal": {
+      "file": "27_copier_normal.png",
+      "group": "paired_state",
+      "state": "normal",
+      "original_bbox": [
+        1210,
+        595,
+        1297,
+        693
+      ],
+      "spritesheet_bbox": [
+        825,
+        305,
+        87,
+        98
+      ],
+      "size": [
+        87,
+        98
+      ],
+      "cleaned_file": "27_copier_normal.png"
+    },
+    "copier_broken": {
+      "file": "28_copier_broken.png",
+      "group": "paired_state",
+      "state": "broken",
+      "original_bbox": [
+        1312,
+        592,
+        1437,
+        706
+      ],
+      "spritesheet_bbox": [
+        8,
+        465,
+        125,
+        114
+      ],
+      "size": [
+        125,
+        114
+      ],
+      "cleaned_file": "28_copier_broken.png"
+    },
+    "filing_cabinets_normal": {
+      "file": "29_filing_cabinets_normal.png",
+      "group": "paired_state",
+      "state": "normal",
+      "original_bbox": [
+        1543,
+        514,
+        1719,
+        652
+      ],
+      "spritesheet_bbox": [
+        141,
+        465,
+        176,
+        138
+      ],
+      "size": [
+        176,
+        138
+      ],
+      "cleaned_file": "29_filing_cabinets_normal.png"
+    },
+    "filing_cabinets_broken": {
+      "file": "30_filing_cabinets_broken.png",
+      "group": "paired_state",
+      "state": "broken",
+      "original_bbox": [
+        1711,
+        514,
+        1922,
+        648
+      ],
+      "spritesheet_bbox": [
+        325,
+        465,
+        211,
+        134
+      ],
+      "size": [
+        211,
+        134
+      ],
+      "cleaned_file": "30_filing_cabinets_broken.png"
+    }
+  }
+}

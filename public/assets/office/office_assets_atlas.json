@@ -1,0 +1,614 @@
+﻿{
+    "frames":  {
+                   "door_mat_01":  {
+                                       "frame":  {
+                                                     "x":  8,
+                                                     "y":  8,
+                                                     "w":  46,
+                                                     "h":  137
+                                                 },
+                                       "rotated":  false,
+                                       "trimmed":  false,
+                                       "spriteSourceSize":  {
+                                                                "x":  0,
+                                                                "y":  0,
+                                                                "w":  46,
+                                                                "h":  137
+                                                            },
+                                       "sourceSize":  {
+                                                          "w":  46,
+                                                          "h":  137
+                                                      }
+                                   },
+                   "tall_potted_plant":  {
+                                             "frame":  {
+                                                           "x":  62,
+                                                           "y":  8,
+                                                           "w":  55,
+                                                           "h":  103
+                                                       },
+                                             "rotated":  false,
+                                             "trimmed":  false,
+                                             "spriteSourceSize":  {
+                                                                      "x":  0,
+                                                                      "y":  0,
+                                                                      "w":  55,
+                                                                      "h":  103
+                                                                  },
+                                             "sourceSize":  {
+                                                                "w":  55,
+                                                                "h":  103
+                                                            }
+                                         },
+                   "coffee_station_table":  {
+                                                "frame":  {
+                                                              "x":  125,
+                                                              "y":  8,
+                                                              "w":  107,
+                                                              "h":  87
+                                                          },
+                                                "rotated":  false,
+                                                "trimmed":  false,
+                                                "spriteSourceSize":  {
+                                                                         "x":  0,
+                                                                         "y":  0,
+                                                                         "w":  107,
+                                                                         "h":  87
+                                                                     },
+                                                "sourceSize":  {
+                                                                   "w":  107,
+                                                                   "h":  87
+                                                               }
+                                            },
+                   "cardboard_stack_large":  {
+                                                 "frame":  {
+                                                               "x":  240,
+                                                               "y":  8,
+                                                               "w":  67,
+                                                               "h":  79
+                                                           },
+                                                 "rotated":  false,
+                                                 "trimmed":  false,
+                                                 "spriteSourceSize":  {
+                                                                          "x":  0,
+                                                                          "y":  0,
+                                                                          "w":  67,
+                                                                          "h":  79
+                                                                      },
+                                                 "sourceSize":  {
+                                                                    "w":  67,
+                                                                    "h":  79
+                                                                }
+                                             },
+                   "small_potted_cactus":  {
+                                               "frame":  {
+                                                             "x":  315,
+                                                             "y":  8,
+                                                             "w":  28,
+                                                             "h":  43
+                                                         },
+                                               "rotated":  false,
+                                               "trimmed":  false,
+                                               "spriteSourceSize":  {
+                                                                        "x":  0,
+                                                                        "y":  0,
+                                                                        "w":  28,
+                                                                        "h":  43
+                                                                    },
+                                               "sourceSize":  {
+                                                                  "w":  28,
+                                                                  "h":  43
+                                                              }
+                                           },
+                   "large_potted_plant":  {
+                                              "frame":  {
+                                                            "x":  351,
+                                                            "y":  8,
+                                                            "w":  53,
+                                                            "h":  87
+                                                        },
+                                              "rotated":  false,
+                                              "trimmed":  false,
+                                              "spriteSourceSize":  {
+                                                                       "x":  0,
+                                                                       "y":  0,
+                                                                       "w":  53,
+                                                                       "h":  87
+                                                                   },
+                                              "sourceSize":  {
+                                                                 "w":  53,
+                                                                 "h":  87
+                                                             }
+                                          },
+                   "paper_shredder":  {
+                                          "frame":  {
+                                                        "x":  412,
+                                                        "y":  8,
+                                                        "w":  72,
+                                                        "h":  84
+                                                    },
+                                          "rotated":  false,
+                                          "trimmed":  false,
+                                          "spriteSourceSize":  {
+                                                                   "x":  0,
+                                                                   "y":  0,
+                                                                   "w":  72,
+                                                                   "h":  84
+                                                               },
+                                          "sourceSize":  {
+                                                             "w":  72,
+                                                             "h":  84
+                                                         }
+                                      },
+                   "water_cooler":  {
+                                        "frame":  {
+                                                      "x":  492,
+                                                      "y":  8,
+                                                      "w":  46,
+                                                      "h":  81
+                                                  },
+                                        "rotated":  false,
+                                        "trimmed":  false,
+                                        "spriteSourceSize":  {
+                                                                 "x":  0,
+                                                                 "y":  0,
+                                                                 "w":  46,
+                                                                 "h":  81
+                                                             },
+                                        "sourceSize":  {
+                                                           "w":  46,
+                                                           "h":  81
+                                                       }
+                                    },
+                   "water_cooler_broken":  {
+                                               "frame":  {
+                                                             "x":  546,
+                                                             "y":  8,
+                                                             "w":  87,
+                                                             "h":  116
+                                                         },
+                                               "rotated":  false,
+                                               "trimmed":  false,
+                                               "spriteSourceSize":  {
+                                                                        "x":  0,
+                                                                        "y":  0,
+                                                                        "w":  87,
+                                                                        "h":  116
+                                                                    },
+                                               "sourceSize":  {
+                                                                  "w":  87,
+                                                                  "h":  116
+                                                              }
+                                           },
+                   "door_mat_02":  {
+                                       "frame":  {
+                                                     "x":  641,
+                                                     "y":  8,
+                                                     "w":  44,
+                                                     "h":  135
+                                                 },
+                                       "rotated":  false,
+                                       "trimmed":  false,
+                                       "spriteSourceSize":  {
+                                                                "x":  0,
+                                                                "y":  0,
+                                                                "w":  44,
+                                                                "h":  135
+                                                            },
+                                       "sourceSize":  {
+                                                          "w":  44,
+                                                          "h":  135
+                                                      }
+                                   },
+                   "low_cabinet_with_plant":  {
+                                                  "frame":  {
+                                                                "x":  693,
+                                                                "y":  8,
+                                                                "w":  98,
+                                                                "h":  79
+                                                            },
+                                                  "rotated":  false,
+                                                  "trimmed":  false,
+                                                  "spriteSourceSize":  {
+                                                                           "x":  0,
+                                                                           "y":  0,
+                                                                           "w":  98,
+                                                                           "h":  79
+                                                                       },
+                                                  "sourceSize":  {
+                                                                     "w":  98,
+                                                                     "h":  79
+                                                                 }
+                                              },
+                   "file_cabinet_single_01":  {
+                                                  "frame":  {
+                                                                "x":  799,
+                                                                "y":  8,
+                                                                "w":  62,
+                                                                "h":  95
+                                                            },
+                                                  "rotated":  false,
+                                                  "trimmed":  false,
+                                                  "spriteSourceSize":  {
+                                                                           "x":  0,
+                                                                           "y":  0,
+                                                                           "w":  62,
+                                                                           "h":  95
+                                                                       },
+                                                  "sourceSize":  {
+                                                                     "w":  62,
+                                                                     "h":  95
+                                                                 }
+                                              },
+                   "file_cabinet_single_02":  {
+                                                  "frame":  {
+                                                                "x":  869,
+                                                                "y":  8,
+                                                                "w":  73,
+                                                                "h":  95
+                                                            },
+                                                  "rotated":  false,
+                                                  "trimmed":  false,
+                                                  "spriteSourceSize":  {
+                                                                           "x":  0,
+                                                                           "y":  0,
+                                                                           "w":  73,
+                                                                           "h":  95
+                                                                       },
+                                                  "sourceSize":  {
+                                                                     "w":  73,
+                                                                     "h":  95
+                                                                 }
+                                              },
+                   "file_cabinet_single_03":  {
+                                                  "frame":  {
+                                                                "x":  950,
+                                                                "y":  8,
+                                                                "w":  64,
+                                                                "h":  95
+                                                            },
+                                                  "rotated":  false,
+                                                  "trimmed":  false,
+                                                  "spriteSourceSize":  {
+                                                                           "x":  0,
+                                                                           "y":  0,
+                                                                           "w":  64,
+                                                                           "h":  95
+                                                                       },
+                                                  "sourceSize":  {
+                                                                     "w":  64,
+                                                                     "h":  95
+                                                                 }
+                                              },
+                   "cardboard_stack_small":  {
+                                                 "frame":  {
+                                                               "x":  8,
+                                                               "y":  153,
+                                                               "w":  54,
+                                                               "h":  76
+                                                           },
+                                                 "rotated":  false,
+                                                 "trimmed":  false,
+                                                 "spriteSourceSize":  {
+                                                                          "x":  0,
+                                                                          "y":  0,
+                                                                          "w":  54,
+                                                                          "h":  76
+                                                                      },
+                                                 "sourceSize":  {
+                                                                    "w":  54,
+                                                                    "h":  76
+                                                                }
+                                             },
+                   "blue_storage_unit":  {
+                                             "frame":  {
+                                                           "x":  70,
+                                                           "y":  153,
+                                                           "w":  42,
+                                                           "h":  70
+                                                       },
+                                             "rotated":  false,
+                                             "trimmed":  false,
+                                             "spriteSourceSize":  {
+                                                                      "x":  0,
+                                                                      "y":  0,
+                                                                      "w":  42,
+                                                                      "h":  70
+                                                                  },
+                                             "sourceSize":  {
+                                                                "w":  42,
+                                                                "h":  70
+                                                            }
+                                         },
+                   "trash_can":  {
+                                     "frame":  {
+                                                   "x":  120,
+                                                   "y":  153,
+                                                   "w":  38,
+                                                   "h":  45
+                                               },
+                                     "rotated":  false,
+                                     "trimmed":  false,
+                                     "spriteSourceSize":  {
+                                                              "x":  0,
+                                                              "y":  0,
+                                                              "w":  38,
+                                                              "h":  45
+                                                          },
+                                     "sourceSize":  {
+                                                        "w":  38,
+                                                        "h":  45
+                                                    }
+                                 },
+                   "trash_can_broken":  {
+                                            "frame":  {
+                                                          "x":  166,
+                                                          "y":  153,
+                                                          "w":  87,
+                                                          "h":  62
+                                                      },
+                                            "rotated":  false,
+                                            "trimmed":  false,
+                                            "spriteSourceSize":  {
+                                                                     "x":  0,
+                                                                     "y":  0,
+                                                                     "w":  87,
+                                                                     "h":  62
+                                                                 },
+                                            "sourceSize":  {
+                                                               "w":  87,
+                                                               "h":  62
+                                                           }
+                                        },
+                   "bookcase_normal":  {
+                                           "frame":  {
+                                                         "x":  261,
+                                                         "y":  153,
+                                                         "w":  165,
+                                                         "h":  112
+                                                     },
+                                           "rotated":  false,
+                                           "trimmed":  false,
+                                           "spriteSourceSize":  {
+                                                                    "x":  0,
+                                                                    "y":  0,
+                                                                    "w":  165,
+                                                                    "h":  112
+                                                                },
+                                           "sourceSize":  {
+                                                              "w":  165,
+                                                              "h":  112
+                                                          }
+                                       },
+                   "bookcase_broken":  {
+                                           "frame":  {
+                                                         "x":  434,
+                                                         "y":  153,
+                                                         "w":  193,
+                                                         "h":  144
+                                                     },
+                                           "rotated":  false,
+                                           "trimmed":  false,
+                                           "spriteSourceSize":  {
+                                                                    "x":  0,
+                                                                    "y":  0,
+                                                                    "w":  193,
+                                                                    "h":  144
+                                                                },
+                                           "sourceSize":  {
+                                                              "w":  193,
+                                                              "h":  144
+                                                          }
+                                       },
+                   "storage_cabinet_normal":  {
+                                                  "frame":  {
+                                                                "x":  635,
+                                                                "y":  153,
+                                                                "w":  179,
+                                                                "h":  98
+                                                            },
+                                                  "rotated":  false,
+                                                  "trimmed":  false,
+                                                  "spriteSourceSize":  {
+                                                                           "x":  0,
+                                                                           "y":  0,
+                                                                           "w":  179,
+                                                                           "h":  98
+                                                                       },
+                                                  "sourceSize":  {
+                                                                     "w":  179,
+                                                                     "h":  98
+                                                                 }
+                                              },
+                   "storage_cabinet_broken":  {
+                                                  "frame":  {
+                                                                "x":  822,
+                                                                "y":  153,
+                                                                "w":  187,
+                                                                "h":  119
+                                                            },
+                                                  "rotated":  false,
+                                                  "trimmed":  false,
+                                                  "spriteSourceSize":  {
+                                                                           "x":  0,
+                                                                           "y":  0,
+                                                                           "w":  187,
+                                                                           "h":  119
+                                                                       },
+                                                  "sourceSize":  {
+                                                                     "w":  187,
+                                                                     "h":  119
+                                                                 }
+                                              },
+                   "double_desks_normal":  {
+                                               "frame":  {
+                                                             "x":  8,
+                                                             "y":  305,
+                                                             "w":  185,
+                                                             "h":  143
+                                                         },
+                                               "rotated":  false,
+                                               "trimmed":  false,
+                                               "spriteSourceSize":  {
+                                                                        "x":  0,
+                                                                        "y":  0,
+                                                                        "w":  185,
+                                                                        "h":  143
+                                                                    },
+                                               "sourceSize":  {
+                                                                  "w":  185,
+                                                                  "h":  143
+                                                              }
+                                           },
+                   "double_desks_broken":  {
+                                               "frame":  {
+                                                             "x":  201,
+                                                             "y":  305,
+                                                             "w":  226,
+                                                             "h":  152
+                                                         },
+                                               "rotated":  false,
+                                               "trimmed":  false,
+                                               "spriteSourceSize":  {
+                                                                        "x":  0,
+                                                                        "y":  0,
+                                                                        "w":  226,
+                                                                        "h":  152
+                                                                    },
+                                               "sourceSize":  {
+                                                                  "w":  226,
+                                                                  "h":  152
+                                                              }
+                                           },
+                   "single_desk_normal":  {
+                                              "frame":  {
+                                                            "x":  435,
+                                                            "y":  305,
+                                                            "w":  132,
+                                                            "h":  123
+                                                        },
+                                              "rotated":  false,
+                                              "trimmed":  false,
+                                              "spriteSourceSize":  {
+                                                                       "x":  0,
+                                                                       "y":  0,
+                                                                       "w":  132,
+                                                                       "h":  123
+                                                                   },
+                                              "sourceSize":  {
+                                                                 "w":  132,
+                                                                 "h":  123
+                                                             }
+                                          },
+                   "single_desk_broken":  {
+                                              "frame":  {
+                                                            "x":  575,
+                                                            "y":  305,
+                                                            "w":  242,
+                                                            "h":  134
+                                                        },
+                                              "rotated":  false,
+                                              "trimmed":  false,
+                                              "spriteSourceSize":  {
+                                                                       "x":  0,
+                                                                       "y":  0,
+                                                                       "w":  242,
+                                                                       "h":  134
+                                                                   },
+                                              "sourceSize":  {
+                                                                 "w":  242,
+                                                                 "h":  134
+                                                             }
+                                          },
+                   "copier_normal":  {
+                                         "frame":  {
+                                                       "x":  825,
+                                                       "y":  305,
+                                                       "w":  87,
+                                                       "h":  98
+                                                   },
+                                         "rotated":  false,
+                                         "trimmed":  false,
+                                         "spriteSourceSize":  {
+                                                                  "x":  0,
+                                                                  "y":  0,
+                                                                  "w":  87,
+                                                                  "h":  98
+                                                              },
+                                         "sourceSize":  {
+                                                            "w":  87,
+                                                            "h":  98
+                                                        }
+                                     },
+                   "copier_broken":  {
+                                         "frame":  {
+                                                       "x":  8,
+                                                       "y":  465,
+                                                       "w":  125,
+                                                       "h":  114
+                                                   },
+                                         "rotated":  false,
+                                         "trimmed":  false,
+                                         "spriteSourceSize":  {
+                                                                  "x":  0,
+                                                                  "y":  0,
+                                                                  "w":  125,
+                                                                  "h":  114
+                                                              },
+                                         "sourceSize":  {
+                                                            "w":  125,
+                                                            "h":  114
+                                                        }
+                                     },
+                   "filing_cabinets_normal":  {
+                                                  "frame":  {
+                                                                "x":  141,
+                                                                "y":  465,
+                                                                "w":  176,
+                                                                "h":  138
+                                                            },
+                                                  "rotated":  false,
+                                                  "trimmed":  false,
+                                                  "spriteSourceSize":  {
+                                                                           "x":  0,
+                                                                           "y":  0,
+                                                                           "w":  176,
+                                                                           "h":  138
+                                                                       },
+                                                  "sourceSize":  {
+                                                                     "w":  176,
+                                                                     "h":  138
+                                                                 }
+                                              },
+                   "filing_cabinets_broken":  {
+                                                  "frame":  {
+                                                                "x":  325,
+                                                                "y":  465,
+                                                                "w":  211,
+                                                                "h":  134
+                                                            },
+                                                  "rotated":  false,
+                                                  "trimmed":  false,
+                                                  "spriteSourceSize":  {
+                                                                           "x":  0,
+                                                                           "y":  0,
+                                                                           "w":  211,
+                                                                           "h":  134
+                                                                       },
+                                                  "sourceSize":  {
+                                                                     "w":  211,
+                                                                     "h":  134
+                                                                 }
+                                              }
+               },
+    "meta":  {
+                 "app":  "TOJAM2026 generated from office_assets_atlas_cleaned.json",
+                 "image":  "office_assets_spritesheet.png",
+                 "format":  "RGBA8888",
+                 "size":  {
+                              "w":  1022,
+                              "h":  611
+                          },
+                 "scale":  "1"
+             }
+}
