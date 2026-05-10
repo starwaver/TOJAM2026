@@ -65,4 +65,7 @@ export const DEFAULT_OFFICE_ITEMS: OfficeSceneItem[] = [
   { id: 'single_desk_normal-1778440808589', kind: 'atlas', frame: OfficeAssetFrames.singleDeskNormal, x: 967.00, y: 893.22, scale: 1.25 },
   { id: 'blue_storage_unit-1778440832953', kind: 'atlas', frame: OfficeAssetFrames.blueStorageUnit, x: 35.86, y: 544.10, scale: 1.25 },
   { id: 'low_cabinet_with_plant-1778440840632', kind: 'atlas', frame: OfficeAssetFrames.lowCabinetWithPlant, x: 71.21, y: 723.08, scale: 1.25 },
+  { id: 'blue_storage_unit-1778440850788', kind: 'atlas', frame: OfficeAssetFrames.blueStorageUnit, x: 1408.83, y: 829.14, scale: 1.25 },
+  { id: 'double_desks_normal-1778440891934', kind: 'atlas', frame: OfficeAssetFrames.doubleDesksNormal, x: 669.88, y: 905.37, scale: 1.25 },
+  { id: 'trash_can-1778440903819', kind: 'atlas', frame: OfficeAssetFrames.trashCan, x: 530.70, y: 895.43, scale: 1.25 },
 ];
