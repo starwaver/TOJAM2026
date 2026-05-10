@@ -1,7 +1,7 @@
 export const BalanceConfig = {
   maxSanity: 100,
   maxRage: 100,
-  minTimeMultiplier: 0.4,
+  minTimeMultiplier: 1 / 3,
   maxTimeMultiplier: 1,
   // Sanity loss on success: baseSanityLoss + panicSanityLoss * (1 - timeRemainingRatio)
   // More time remaining = less panic = less sanity lost
@@ -20,6 +20,6 @@ export const BalanceConfig = {
   maxSanityRestoreFromBoss: 50,
   dayProgressPerTask: 10,
   dayCompleteProgress: 100,
-  difficultyStepTasks: 1,
+  difficultyStepTasks: 3,
   maxDifficulty: 10,
 } as const;

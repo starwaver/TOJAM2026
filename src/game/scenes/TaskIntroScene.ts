@@ -34,9 +34,7 @@ export class TaskIntroScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const remainingSeconds = this.taskConfig.deadlineAtMs
-      ? Math.max(0, (this.taskConfig.deadlineAtMs - Date.now()) / 1000)
-      : this.taskConfig.actualTimeLimit;
+    const remainingSeconds = this.taskConfig.actualTimeLimit;
 
     this.add
       .text(this.scale.width / 2, this.scale.height / 2 + 18, `Time: ${remainingSeconds.toFixed(1)}s`, {

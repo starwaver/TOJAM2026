@@ -11,7 +11,6 @@ import { DEFAULT_OFFICE_ITEMS } from '../data/OfficeLayoutData';
 import type { OfficeSceneItem } from '../data/OfficeLayoutData';
 import {
   workdayTaskQueue,
-  WORKDAY_TASK_TIME_LIMIT_SECONDS,
   type AssignedWorkdayTask,
 } from '../systems/WorkdayTaskQueue';
 import { SceneKeys } from '../types/SceneKeys';
@@ -94,7 +93,7 @@ export class WorkdayScene extends Phaser.Scene {
       0,
       BalanceConfig.dayCompleteProgress,
     );
-    state.difficultyLevel = DifficultySystem.getDifficulty(state.completedTasks + state.failedTasks);
+    state.difficultyLevel = DifficultySystem.getDifficulty(state.failedTasks);
     GameState.setCurrentTask(null);
     GameState.clampVitals();
   }
@@ -123,7 +122,7 @@ export class WorkdayScene extends Phaser.Scene {
 
   private showTaskSelection(): void {
     const state = GameState.data;
-    const difficulty = DifficultySystem.getDifficulty(state.completedTasks + state.failedTasks);
+    const difficulty = DifficultySystem.getDifficulty(state.failedTasks);
     this.activeDifficulty = difficulty;
 
     const expiredResults = workdayTaskQueue.sync(difficulty);
@@ -200,17 +199,18 @@ export class WorkdayScene extends Phaser.Scene {
 
     const state = GameState.data;
     const task = claimedAssignment.task;
+    const actualTimeLimit = SanitySystem.getActualTimeLimit(task.baseTimeLimit, state.sanity);
     const taskConfig: TaskConfig = {
       id: task.id,
       displayName: task.displayName,
       baseTimeLimit: task.baseTimeLimit,
-      actualTimeLimit: WORKDAY_TASK_TIME_LIMIT_SECONDS,
+      actualTimeLimit,
       difficulty: claimedAssignment.difficulty,
       sanityAtStart: state.sanity,
       rageAtStart: state.rage,
       taskInstanceId: claimedAssignment.instanceId,
       deadlineAtMs: claimedAssignment.expiresAtMs,
-      assignmentTimeLimit: WORKDAY_TASK_TIME_LIMIT_SECONDS,
+      assignmentTimeLimit: actualTimeLimit,
     };
 
     state.difficultyLevel = claimedAssignment.difficulty;

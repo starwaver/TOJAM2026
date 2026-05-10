@@ -57,10 +57,6 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
       return 0;
     }
 
-    if (this.taskConfig.deadlineAtMs) {
-      return Math.max(0, (this.taskConfig.deadlineAtMs - Date.now()) / 1000);
-    }
-
     if (!this.taskTimer) {
       return this.taskConfig.actualTimeLimit;
     }

@@ -1,7 +1,7 @@
 import { taskDirector } from './TaskDirector';
 import type { TaskDefinition, TaskResult } from '../types/TaskTypes';
 
-export const WORKDAY_TASK_TIME_LIMIT_SECONDS = 30;
+export const WORKDAY_TASK_TIME_LIMIT_SECONDS = 60;
 const MIN_ASSIGNMENT_DELAY_MS = 5_000;
 const MAX_ASSIGNMENT_DELAY_MS = 15_000;
 
