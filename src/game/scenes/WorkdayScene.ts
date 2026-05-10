@@ -61,6 +61,7 @@ export class WorkdayScene extends Phaser.Scene {
     this.createOffice();
     this.mountEditorUi();
     this.bindEditorInput();
+    this.input.keyboard?.on('keydown-R', this.handleRageTestKeyDown, this);
 
     if (this.taskResult) {
       this.applyTaskResult(this.taskResult);
@@ -395,6 +396,23 @@ export class WorkdayScene extends Phaser.Scene {
       this.createDomMeter('Rage', GameState.data.rage, BalanceConfig.maxRage, '#e74c3c'),
     );
     return section;
+  }
+
+  private handleRageTestKeyDown(event: KeyboardEvent): void {
+    if (event.repeat) {
+      return;
+    }
+
+    this.triggerRageTest();
+  }
+
+  private triggerRageTest(): void {
+    const state = GameState.data;
+    state.rage = BalanceConfig.maxRage;
+    state.peakRage = Math.max(state.peakRage, state.rage);
+    GameState.clampVitals();
+
+    SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.rageTransition });
   }
 
   private createTaskList(eligibleTasks: TaskDefinition[], difficulty: number): HTMLElement {
@@ -968,6 +986,7 @@ export class WorkdayScene extends Phaser.Scene {
   }
 
   private cleanup(): void {
+    this.input.keyboard?.off('keydown-R', this.handleRageTestKeyDown, this);
     this.workdayUiRoot?.remove();
     this.workdayUiRoot = undefined;
     this.editorRoot?.remove();
