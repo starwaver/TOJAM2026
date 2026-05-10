@@ -56,6 +56,14 @@ export class MainMenuScene extends Phaser.Scene {
       taskDirector.reset();
       SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.bossFight });
     });
+
+    this.createButton('Boss Coffee Run', this.scale.width / 2, this.scale.height / 2 + 314, () => {
+      SceneTransitionService.start(this, {
+        kind: 'immediate',
+        target: SceneKeys.coffeeRun,
+        data: { mode: 'standalone' },
+      });
+    });
   }
 
   private createButton(label: string, x: number, y: number, onClick: () => void): void {

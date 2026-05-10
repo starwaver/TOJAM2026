@@ -201,7 +201,7 @@ export class WorkdayScene extends Phaser.Scene {
       id: task.id,
       displayName: task.displayName,
       baseTimeLimit: task.baseTimeLimit,
-      actualTimeLimit: SanitySystem.getActualTimeLimit(task.baseTimeLimit, state.sanity),
+      actualTimeLimit: this.getActualTimeLimit(task, difficulty),
       difficulty,
       sanityAtStart: state.sanity,
       rageAtStart: state.rage,
@@ -459,8 +459,7 @@ export class WorkdayScene extends Phaser.Scene {
   }
 
   private createTaskListButton(task: TaskDefinition, difficulty: number): HTMLButtonElement {
-    const state = GameState.data;
-    const timeLimit = SanitySystem.getActualTimeLimit(task.baseTimeLimit, state.sanity);
+    const timeLimit = this.getActualTimeLimit(task, difficulty);
     const button = document.createElement('button');
     button.type = 'button';
     button.style.display = 'grid';
@@ -979,6 +978,24 @@ export class WorkdayScene extends Phaser.Scene {
 
   private officeDepth(layout: OfficeLayout, y: number): number {
     return OFFICE_DEPTH + Math.round(y * layout.scale);
+  }
+
+  private getActualTimeLimit(task: TaskDefinition, difficulty: number): number {
+    const sanityAdjustedTime = SanitySystem.getActualTimeLimit(task.baseTimeLimit, GameState.data.sanity);
+
+    if (!task.difficultyTimeScale) {
+      return sanityAdjustedTime;
+    }
+
+    const difficultyRange = Math.max(1, task.maxDifficulty - task.minDifficulty);
+    const difficultyProgress = Phaser.Math.Clamp((difficulty - task.minDifficulty) / difficultyRange, 0, 1);
+    const difficultyMultiplier = Phaser.Math.Linear(
+      task.difficultyTimeScale.maxMultiplier,
+      task.difficultyTimeScale.minMultiplier,
+      difficultyProgress,
+    );
+
+    return sanityAdjustedTime * difficultyMultiplier;
   }
 
   private cleanup(): void {

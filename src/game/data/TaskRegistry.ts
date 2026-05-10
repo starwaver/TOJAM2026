@@ -18,4 +18,16 @@ export const TaskRegistry: TaskDefinition[] = [
     minDifficulty: 1,
     maxDifficulty: 10,
   },
+  {
+    id: 'coffee_run',
+    displayName: 'Boss Coffee Run',
+    scene: SceneKeys.coffeeRun,
+    baseTimeLimit: 30,
+    minDifficulty: 1,
+    maxDifficulty: 10,
+    difficultyTimeScale: {
+      minMultiplier: 0.65,
+      maxMultiplier: 1,
+    },
+  },
 ];
