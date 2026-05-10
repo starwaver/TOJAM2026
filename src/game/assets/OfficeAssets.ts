@@ -6,6 +6,12 @@ export const OfficeAssets = {
   backgroundPath: 'assets/office/office_bakcground.png',
   atlasPath: 'assets/office/office_assets_atlas.json',
   metadataPath: 'assets/office/office_assets_atlas_cleaned.json',
+  ceoTableIntactKey: 'ceo-table-intact',
+  ceoTableBrokenKey: 'ceo-table-broken',
+  ceoTableIntactPath: 'assets/office/ceo_table_intact.png',
+  ceoTableBrokenPath: 'assets/office/ceo_table_broken.png',
+  bossKey: 'boss-image',
+  bossPath: 'assets/boss.png',
 } as const;
 
 export const OfficeAssetFrames = {
