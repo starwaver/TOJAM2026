@@ -61,6 +61,15 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
     return Math.max(0, this.taskTimer.getRemainingSeconds());
   }
 
+  protected pauseTaskTimer(): void {
+    if (!this.taskTimer) {
+      return;
+    }
+
+    this.taskTimer.paused = true;
+    this.refreshHud();
+  }
+
   protected completeTask(success: boolean, score: number, mistakes = 0): void {
     if (!this.taskConfig || this.completed) {
       return;

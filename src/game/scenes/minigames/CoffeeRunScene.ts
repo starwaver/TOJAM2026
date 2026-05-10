@@ -24,13 +24,16 @@ type DrinkState = {
 
 type ChoiceImage = Phaser.GameObjects.Image & { choiceKey?: string };
 
-const STAGE_WIDTH = 1536;
-const STAGE_HEIGHT = 1024;
+const STAGE_WIDTH = 1600;
+const STAGE_HEIGHT = 900;
 const SHELF_Y = 755;
 const ASSET_PATH = 'assets/coffee/';
+const BOSS_TEXTURE_KEY = 'boss-portrait';
+const BOSS_ASSET_PATH = 'assets/boss.png';
 const MACHINE_CUP_X = 708;
 const MACHINE_CUP_BOTTOM_Y = 635;
 const MUG_HANDLE_OFFSET_RATIO = 0.15;
+const STANDALONE_TIME_LIMIT = 30;
 
 const cupLabels: Record<CupType, string> = {
   mug: 'mug',
@@ -77,6 +80,9 @@ export class CoffeeRunScene extends BaseMiniGameScene {
   private activeCup?: Phaser.GameObjects.Image;
   private requestText?: Phaser.GameObjects.Text;
   private feedbackText?: Phaser.GameObjects.Text;
+  private brewStatusText?: Phaser.GameObjects.Text;
+  private timerPanel?: Phaser.GameObjects.Rectangle;
+  private timerText?: Phaser.GameObjects.Text;
   private dairyMark?: Phaser.GameObjects.Text;
   private bossZone?: Phaser.GameObjects.Zone;
   private trashZone?: Phaser.GameObjects.Zone;
@@ -92,6 +98,8 @@ export class CoffeeRunScene extends BaseMiniGameScene {
   private dragOffsetX = 0;
   private dragOffsetY = 0;
   private pendingResult?: { success: boolean; score: number; mistakes: number };
+  private standaloneTimerStartedAt = 0;
+  private pausedTimeRemaining?: number;
 
   constructor() {
     super(SceneKeys.coffeeRun);
@@ -105,9 +113,14 @@ export class CoffeeRunScene extends BaseMiniGameScene {
     this.trashResets = 0;
     this.served = false;
     this.pendingResult = undefined;
+    this.pausedTimeRemaining = undefined;
   }
 
   preload(): void {
+    if (!this.textures.exists(BOSS_TEXTURE_KEY)) {
+      this.load.image(BOSS_TEXTURE_KEY, BOSS_ASSET_PATH);
+    }
+
     for (const [key, file] of Object.entries(assetFiles)) {
       if (!this.textures.exists(key)) {
         this.load.image(key, `${ASSET_PATH}${file}`);
@@ -117,6 +130,7 @@ export class CoffeeRunScene extends BaseMiniGameScene {
 
   create(): void {
     this.cameras.main.setBackgroundColor('#bfe5e2');
+    this.standaloneTimerStartedAt = this.time.now;
     this.createStage();
     this.layoutStage();
 
@@ -131,6 +145,11 @@ export class CoffeeRunScene extends BaseMiniGameScene {
     }
 
     this.say('Pick the cup from the station.');
+    this.updateTimerDisplay();
+  }
+
+  update(): void {
+    this.updateTimerDisplay();
   }
 
   private createOrder(): CoffeeOrder {
@@ -151,6 +170,7 @@ export class CoffeeRunScene extends BaseMiniGameScene {
     this.createTrashArea();
     this.createFeedback();
     this.createRequestBubble();
+    this.createTimerDisplay();
   }
 
   private createBackground(): void {
@@ -177,26 +197,14 @@ export class CoffeeRunScene extends BaseMiniGameScene {
       return;
     }
 
-    const bossPlate = this.add.rectangle(1344, 184, 260, 220, 0x2b3842, 0.94).setStrokeStyle(4, 0xf2c14e);
-    const bossHead = this.add.circle(1344, 144, 54, 0xf5c39b).setStrokeStyle(4, 0x3a251b);
-    const hair = this.add.rectangle(1344, 104, 96, 34, 0x33251f);
-    const body = this.add.triangle(1344, 254, 1270, 318, 1418, 318, 1344, 176, 0x204f75);
-    const eyeLeft = this.add.circle(1324, 142, 5, 0x101820);
-    const eyeRight = this.add.circle(1364, 142, 5, 0x101820);
-    const mouth = this.add.rectangle(1344, 174, 48, 5, 0x7d2f2f);
-    const label = this.add
-      .text(1344, 42, 'BOSS', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '24px',
-        fontStyle: '700',
-        color: '#f8f5f0',
-      })
-      .setOrigin(0.5);
+    const bossX = 1344;
+    const bossY = 170;
+    const bossSize = 260;
+    const boss = this.add.image(bossX, bossY, BOSS_TEXTURE_KEY).setDisplaySize(bossSize, bossSize);
+    this.bossDropVisual = this.add.rectangle(bossX, bossY, bossSize, bossSize, 0x68d391, 0.12).setStrokeStyle(4, 0x68d391, 0.72);
+    this.bossZone = this.add.zone(bossX, bossY, bossSize, bossSize).setRectangleDropZone(bossSize, bossSize);
 
-    this.bossDropVisual = this.add.rectangle(1344, 358, 250, 86, 0x68d391, 0.18).setStrokeStyle(4, 0x68d391, 0.75);
-    this.bossZone = this.add.zone(1344, 358, 250, 112).setRectangleDropZone(250, 112);
-
-    this.stage.add([bossPlate, body, bossHead, hair, eyeLeft, eyeRight, mouth, label, this.bossDropVisual, this.bossZone]);
+    this.stage.add([boss, this.bossDropVisual, this.bossZone]);
   }
 
   private createStation(): void {
@@ -204,16 +212,30 @@ export class CoffeeRunScene extends BaseMiniGameScene {
       return;
     }
 
-    const mug = this.addChoiceImage(110, 665, cupTextureKeys.mug, 'mug', 172);
+    const mug = this.addChoiceImage(110, 685, cupTextureKeys.mug, 'mug', 172);
     const paper = this.addChoiceImage(275, 655, cupTextureKeys.paper, 'paper', 238);
-    const tumbler = this.addChoiceImage(430, 637, cupTextureKeys.tumbler, 'tumbler', 286);
+    const tumbler = this.addChoiceImage(430, 635, cupTextureKeys.tumbler, 'tumbler', 286);
     const machine = this.add.image(708, 490, 'coffee-machine').setDisplaySize(388, 522).setDepth(2);
-    const milk = this.addChoiceImage(1010, 650, 'coffee-milk-pitcher', 'milk', 270);
-    const sugar = this.addChoiceImage(1194, 660, 'coffee-sugar-jar', 'sugar', 218);
-    const cream = this.addChoiceImage(1404, 650, 'coffee-cream-carton', 'cream', 320);
+    const brewStatusText = this.add
+      .text(708, 350, 'Ready to brew', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '24px',
+        fontStyle: '700',
+        color: '#f8f5f0',
+        align: 'center',
+        wordWrap: { width: 190 },
+        fixedWidth: 190,
+        padding: { top: 5 },
+      })
+      .setOrigin(0.5)
+      .setDepth(9);
+    const milk = this.addChoiceImage(1010, 640, 'coffee-milk-pitcher', 'milk', 270);
+    const sugar = this.addChoiceImage(1194, 670, 'coffee-sugar-jar', 'sugar', 218);
+    const cream = this.addChoiceImage(1404, 620, 'coffee-cream-carton', 'cream', 320);
 
-    this.stage.add([mug, paper, tumbler, machine, milk, sugar, cream]);
-    this.stationObjects.push(mug, paper, tumbler, machine, milk, sugar, cream);
+    this.brewStatusText = brewStatusText;
+    this.stage.add([mug, paper, tumbler, machine, brewStatusText, milk, sugar, cream]);
+    this.stationObjects.push(mug, paper, tumbler, machine, brewStatusText, milk, sugar, cream);
     this.createStrengthZones();
   }
 
@@ -236,13 +258,13 @@ export class CoffeeRunScene extends BaseMiniGameScene {
     }
 
     const defs: { key: Strength; x: number }[] = [
-      { key: 'normal', x: 596 },
+      { key: 'normal', x: 590 },
       { key: 'strong', x: 708 },
-      { key: 'espresso', x: 820 },
+      { key: 'espresso', x: 830 },
     ];
 
     for (const def of defs) {
-      const zone = this.add.zone(def.x, 704, 96, 54).setRectangleDropZone(96, 54).setInteractive({ useHandCursor: true });
+      const zone = this.add.zone(def.x, 704, 100, 40).setRectangleDropZone(100, 40).setInteractive({ useHandCursor: true });
       zone.setData('strength', def.key);
       zone.on('pointerdown', () => this.chooseStrength(def.key));
       zone.on('pointerover', () => this.highlightStrength(def.key, true));
@@ -257,17 +279,17 @@ export class CoffeeRunScene extends BaseMiniGameScene {
       return;
     }
 
-    const trashVisual = this.add.image(126, 858, 'coffee-trash-can').setDisplaySize(164, 246).setAlpha(0.96);
+    const trashVisual = this.add.image(150, 300, 'coffee-trash-can').setDisplaySize(150, 250).setAlpha(0.96);
     this.trashVisual = trashVisual;
     const label = this.add
-      .text(126, 996, 'TRASH', {
+      .text(130, 300, 'TRASH', {
         fontFamily: 'Arial, sans-serif',
         fontSize: '18px',
         fontStyle: '700',
         color: '#f8f5f0',
       })
       .setOrigin(0.5);
-    this.trashZone = this.add.zone(126, 870, 196, 238).setRectangleDropZone(196, 238);
+    this.trashZone = this.add.zone(150, 300, 150, 250).setRectangleDropZone(150, 250);
     this.stage.add([trashVisual, label, this.trashZone]);
   }
 
@@ -277,12 +299,12 @@ export class CoffeeRunScene extends BaseMiniGameScene {
     }
 
     this.feedbackText = this.add
-      .text(428, 88, '', {
+      .text(250, 88, '', {
         fontFamily: 'Arial, sans-serif',
         fontSize: '24px',
         fontStyle: '700',
         color: '#fff7d6',
-        align: 'center',
+        align: 'left',
         wordWrap: { width: 640 },
       })
       .setOrigin(0.5);
@@ -294,10 +316,9 @@ export class CoffeeRunScene extends BaseMiniGameScene {
       return;
     }
 
-    const bubble = this.add.rectangle(1054, 130, 548, 148, 0xfff7d6, 0.96).setStrokeStyle(4, 0x7a4b22);
-    const tail = this.add.triangle(1232, 210, 0, 0, 82, 0, 82, 54, 0xfff7d6, 0.96).setStrokeStyle(4, 0x7a4b22);
+    const bubble = this.add.rectangle(800, 130, 548, 148, 0xfff7d6, 0.96).setStrokeStyle(4, 0x7a4b22);
     this.requestText = this.add
-      .text(1054, 130, this.getOrderText(), {
+      .text(800, 130, this.getOrderText(), {
         fontFamily: 'Arial, sans-serif',
         fontSize: '26px',
         fontStyle: '700',
@@ -306,10 +327,33 @@ export class CoffeeRunScene extends BaseMiniGameScene {
         wordWrap: { width: 490 },
       })
       .setOrigin(0.5);
-    this.stage.add([bubble, tail, this.requestText]);
+    this.stage.add([bubble, this.requestText]);
+  }
+
+  private createTimerDisplay(): void {
+    if (!this.stage) {
+      return;
+    }
+
+    this.timerPanel = this.add.rectangle(1344, 328, 220, 44, 0x101820, 0.86).setStrokeStyle(3, 0xf2c14e, 0.86);
+    this.timerText = this.add
+      .text(1344, 328, '', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '22px',
+        fontStyle: '700',
+        color: '#f8f5f0',
+        align: 'center',
+        fixedWidth: 204,
+      })
+      .setOrigin(0.5);
+    this.stage.add([this.timerPanel, this.timerText]);
   }
 
   private getOrderText(): string {
+    if (this.order.sugar === 0 && this.order.dairy === 'none') {
+      return `I need a ${strengthLabels[this.order.strength]} ${cupLabels[this.order.cup]}.\nBlack coffee.`;
+    }
+
     const sugarText = this.order.sugar === 1 ? '1 sugar' : `${this.order.sugar} sugars`;
     return `I need a ${strengthLabels[this.order.strength]} ${cupLabels[this.order.cup]}.\n${sugarText}. ${dairyLabels[this.order.dairy]}.`;
   }
@@ -356,6 +400,7 @@ export class CoffeeRunScene extends BaseMiniGameScene {
     }
 
     this.drink.strength = strength;
+    this.updateBrewStatus(strength);
     this.tintActiveCup(0x8b5a2b);
     this.say('Add sugar and dairy, or drag the cup to serve.');
   }
@@ -379,6 +424,11 @@ export class CoffeeRunScene extends BaseMiniGameScene {
   private chooseDairy(dairy: Exclude<Dairy, 'none'>): void {
     if (!this.drink.cup || !this.drink.strength) {
       this.markMistake('Pour coffee before adding dairy.');
+      return;
+    }
+
+    if (this.drink.dairy) {
+      this.markMistake('Dairy is already added. Use the trash can to restart.');
       return;
     }
 
@@ -525,6 +575,7 @@ export class CoffeeRunScene extends BaseMiniGameScene {
     this.dairyMark = undefined;
     this.clearSugarCubes();
     this.drink = { sugar: 0 };
+    this.updateBrewStatus();
     this.refreshChoiceTints();
     this.say('Coffee trashed. Start again with a cup.');
   }
@@ -554,6 +605,7 @@ export class CoffeeRunScene extends BaseMiniGameScene {
     const score = Math.max(0, 600 + timeBonus - totalMistakes * 140 - this.trashResets * 50);
 
     this.pendingResult = { success, score, mistakes: totalMistakes };
+    this.pauseSceneTimer();
     this.showResult(success, score, wrongParts);
   }
 
@@ -714,6 +766,57 @@ export class CoffeeRunScene extends BaseMiniGameScene {
     this.feedbackText?.setText(message);
   }
 
+  private updateBrewStatus(strength?: Strength): void {
+    const text = strength ? `Enjoy your ${strengthLabels[strength]} coffee` : 'Ready to brew';
+    this.brewStatusText?.setText(strength ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : text);
+  }
+
+  private updateTimerDisplay(): void {
+    if (!this.timerText || !this.timerPanel) {
+      return;
+    }
+
+    const remaining = this.getDisplayedTimeRemaining();
+    this.timerText.setText(`Time ${remaining.toFixed(1)}s`);
+
+    if (remaining <= 5) {
+      this.timerText.setColor('#ffdfdf');
+      this.timerPanel.setStrokeStyle(3, 0xe74c3c, 0.95);
+      return;
+    }
+
+    if (remaining <= 10) {
+      this.timerText.setColor('#fff2a8');
+      this.timerPanel.setStrokeStyle(3, 0xffd166, 0.95);
+      return;
+    }
+
+    this.timerText.setColor('#f8f5f0');
+    this.timerPanel.setStrokeStyle(3, 0xf2c14e, 0.86);
+  }
+
+  private getDisplayedTimeRemaining(): number {
+    if (this.pausedTimeRemaining !== undefined) {
+      return this.pausedTimeRemaining;
+    }
+
+    if (this.taskConfig) {
+      return this.getTaskTimeRemaining();
+    }
+
+    return Math.max(0, STANDALONE_TIME_LIMIT - (this.time.now - this.standaloneTimerStartedAt) / 1000);
+  }
+
+  private pauseSceneTimer(): void {
+    if (this.pausedTimeRemaining !== undefined) {
+      return;
+    }
+
+    this.pausedTimeRemaining = this.getDisplayedTimeRemaining();
+    this.pauseTaskTimer();
+    this.updateTimerDisplay();
+  }
+
   private layoutStage(): void {
     if (!this.stage) {
       return;
@@ -738,6 +841,9 @@ export class CoffeeRunScene extends BaseMiniGameScene {
     this.activeCup = undefined;
     this.requestText = undefined;
     this.feedbackText = undefined;
+    this.brewStatusText = undefined;
+    this.timerPanel = undefined;
+    this.timerText = undefined;
     this.dairyMark = undefined;
     this.bossZone = undefined;
     this.trashZone = undefined;
