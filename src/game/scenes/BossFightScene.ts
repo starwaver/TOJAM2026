@@ -11,6 +11,7 @@ import {
 import { RageSystem } from '../systems/RageSystem';
 import { SanitySystem } from '../systems/SanitySystem';
 import { ScoreSystem } from '../systems/ScoreSystem';
+import { workdayTaskQueue } from '../systems/WorkdayTaskQueue';
 import { SceneKeys } from '../types/SceneKeys';
 
 type ParticleKind = 'coin' | 'debris' | 'paper' | 'hit';
@@ -877,6 +878,7 @@ export class BossFightScene extends Phaser.Scene {
     const score = Math.round(this.styleState.score);
     const sanityRestore = this.getSanityRestoreForScore(score);
     RageSystem.reset(state);
+    workdayTaskQueue.reset();
     SanitySystem.restore(state, sanityRestore);
     ScoreSystem.applyBossFightScore(state, score);
     GameState.clampVitals();
@@ -1348,6 +1350,27 @@ export class BossFightScene extends Phaser.Scene {
     this.input.keyboard?.off('keydown', this.handleKeyDown, this);
     this.input.keyboard?.off('keyup', this.handleKeyUp, this);
     this.floatingTexts.forEach((t) => t.label.destroy());
+    this.breakableItems = [];
+    this.particles = [];
     this.floatingTexts = [];
+    this.root = undefined;
+    this.graphics = undefined;
+    this.resultOverlay = undefined;
+    this.rankLetter = undefined;
+    this.rankTitle = undefined;
+    this.styleBar = undefined;
+    this.styleBack = undefined;
+    this.timerBar = undefined;
+    this.timerBack = undefined;
+    this.comboText = undefined;
+    this.timeText = undefined;
+    this.itemsText = undefined;
+    this.chargeText = undefined;
+    this.bigRankText = undefined;
+    this.bigRankTitle = undefined;
+    this.styleTimerSlash = undefined;
+    this.titleText = undefined;
+    this.bossImage = undefined;
+    this.countdownText = undefined;
   }
 }
