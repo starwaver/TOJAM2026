@@ -4,6 +4,7 @@ export const SceneKeys = {
   mainMenu: 'MainMenuScene',
   workday: 'WorkdayScene',
   taskIntro: 'TaskIntroScene',
+  rageTransition: 'RageTransitionScene',
   bossFight: 'BossFightScene',
   results: 'ResultsScene',
   gameOver: 'GameOverScene',

@@ -4,6 +4,7 @@ import { BootScene } from '../scenes/BootScene';
 import { GameOverScene } from '../scenes/GameOverScene';
 import { MainMenuScene } from '../scenes/MainMenuScene';
 import { PreloadScene } from '../scenes/PreloadScene';
+import { RageTransitionScene } from '../scenes/RageTransitionScene';
 import { ResultsScene } from '../scenes/ResultsScene';
 import { TaskIntroScene } from '../scenes/TaskIntroScene';
 import { WorkdayScene } from '../scenes/WorkdayScene';
@@ -33,6 +34,7 @@ export const GameConfig: Phaser.Types.Core.GameConfig = {
     MainMenuScene,
     WorkdayScene,
     TaskIntroScene,
+    RageTransitionScene,
     BossFightScene,
     ResultsScene,
     GameOverScene,

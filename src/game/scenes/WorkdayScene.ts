@@ -92,7 +92,7 @@ export class WorkdayScene extends Phaser.Scene {
     const state = GameState.data;
 
     if (RageSystem.isFull(state)) {
-      SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.bossFight });
+      SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.rageTransition });
       return;
     }
 
