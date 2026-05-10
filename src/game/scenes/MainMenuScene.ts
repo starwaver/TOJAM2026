@@ -57,6 +57,11 @@ export class MainMenuScene extends Phaser.Scene {
         target: SceneKeys.coffeeRun,
         data: { mode: 'standalone' },
       });
+      
+    this.createButton('Boss Fight Demo', this.scale.width / 2, this.scale.height / 2 + 240, () => {
+      GameState.reset();
+      taskDirector.reset();
+      SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.bossFight });
     });
   }
 

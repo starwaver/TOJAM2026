@@ -52,13 +52,13 @@ export class WorkdayScene extends Phaser.Scene {
   private routeNext(): void {
     const state = GameState.data;
 
-    if (SanitySystem.isDepleted(state)) {
-      SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.gameOver });
+    if (RageSystem.isFull(state)) {
+      SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.bossFight });
       return;
     }
 
-    if (RageSystem.isFull(state)) {
-      SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.bossFight });
+    if (SanitySystem.isDepleted(state)) {
+      SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.gameOver });
       return;
     }
 
