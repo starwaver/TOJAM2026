@@ -75,6 +75,7 @@ export class FlappyBirdScene extends BaseMiniGameScene {
 
     if (this.mode === 'workday') {
       this.prepareTaskHud();
+      this.startTaskTimer();
       this.time.delayedCall(1000, () => {
         this.keyboardInputArmed = true;
       });

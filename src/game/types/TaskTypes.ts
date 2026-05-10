@@ -21,6 +21,9 @@ export interface TaskConfig {
   difficulty: number;
   sanityAtStart: number;
   rageAtStart: number;
+  taskInstanceId?: string;
+  deadlineAtMs?: number;
+  assignmentTimeLimit?: number;
 }
 
 export interface TaskResult {

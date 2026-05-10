@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GameState } from '../core/GameState';
 import { SceneTransitionService } from '../core/SceneTransitionService';
 import { taskDirector } from '../systems/TaskDirector';
+import { workdayTaskQueue } from '../systems/WorkdayTaskQueue';
 import { SceneKeys } from '../types/SceneKeys';
 
 export class MainMenuScene extends Phaser.Scene {
@@ -32,6 +33,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.createButton('Start Workday', this.scale.width / 2, this.scale.height / 2 + 18, () => {
       GameState.reset();
       taskDirector.reset();
+      workdayTaskQueue.reset();
       SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.workday });
     });
 
@@ -54,6 +56,7 @@ export class MainMenuScene extends Phaser.Scene {
     this.createButton('Boss Fight Demo', this.scale.width / 2, this.scale.height / 2 + 240, () => {
       GameState.reset();
       taskDirector.reset();
+      workdayTaskQueue.reset();
       SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.bossFight });
     });
 

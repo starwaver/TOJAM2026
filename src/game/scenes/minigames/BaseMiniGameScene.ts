@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GameState } from '../../core/GameState';
 import { EventBus } from '../../core/EventBus';
 import { SceneTransitionService } from '../../core/SceneTransitionService';
+import { workdayTaskQueue } from '../../systems/WorkdayTaskQueue';
 import { GameEvents } from '../../types/GameEvents';
 import { SceneKeys } from '../../types/SceneKeys';
 import type { MiniGameSceneData, TaskConfig, TaskResult } from '../../types/TaskTypes';
@@ -36,7 +37,7 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
     }
 
     this.ensureWorkdayHud();
-    this.taskTimer = this.time.delayedCall(this.taskConfig.actualTimeLimit * 1000, () => {
+    this.taskTimer = this.time.delayedCall(this.getTaskTimeRemaining() * 1000, () => {
       onExpired?.();
 
       if (!this.completed) {
@@ -52,6 +53,10 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
   protected getTaskTimeRemaining(): number {
     if (!this.taskConfig) {
       return 0;
+    }
+
+    if (this.taskConfig.deadlineAtMs) {
+      return Math.max(0, (this.taskConfig.deadlineAtMs - Date.now()) / 1000);
     }
 
     if (!this.taskTimer) {
@@ -84,10 +89,18 @@ export abstract class BaseMiniGameScene extends Phaser.Scene {
       success,
       score,
       timeRemaining,
-      timeLimit: this.taskConfig.actualTimeLimit,
-      timeRemainingRatio: Phaser.Math.Clamp(timeRemaining / this.taskConfig.actualTimeLimit, 0, 1),
+      timeLimit: this.taskConfig.assignmentTimeLimit ?? this.taskConfig.actualTimeLimit,
+      timeRemainingRatio: Phaser.Math.Clamp(
+        timeRemaining / (this.taskConfig.assignmentTimeLimit ?? this.taskConfig.actualTimeLimit),
+        0,
+        1,
+      ),
       mistakes,
     };
+
+    if (this.taskConfig.taskInstanceId) {
+      workdayTaskQueue.complete(this.taskConfig.taskInstanceId);
+    }
 
     this.events.emit(GameEvents.taskComplete, result);
     EventBus.emit(GameEvents.taskComplete, result);

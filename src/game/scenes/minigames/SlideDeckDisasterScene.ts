@@ -110,6 +110,11 @@ export class SlideDeckDisasterScene extends BaseMiniGameScene {
     this.checkTasks();
     this.updateUi();
 
+    if (this.mode === 'workday') {
+      this.prepareTaskHud();
+      this.startTaskTimer(() => this.finishRun(false));
+    }
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanup, this);
   }
 
@@ -647,6 +652,10 @@ export class SlideDeckDisasterScene extends BaseMiniGameScene {
   }
 
   private getTimeLeft(): number {
+    if (this.mode === 'workday' && this.taskConfig) {
+      return this.getTaskTimeRemaining();
+    }
+
     return this.timeLeft;
   }
 

@@ -9,9 +9,13 @@ import { SanitySystem } from '../systems/SanitySystem';
 import { ScoreSystem } from '../systems/ScoreSystem';
 import { DEFAULT_OFFICE_ITEMS } from '../data/OfficeLayoutData';
 import type { OfficeSceneItem } from '../data/OfficeLayoutData';
-import { TaskRegistry } from '../data/TaskRegistry';
+import {
+  workdayTaskQueue,
+  WORKDAY_TASK_TIME_LIMIT_SECONDS,
+  type AssignedWorkdayTask,
+} from '../systems/WorkdayTaskQueue';
 import { SceneKeys } from '../types/SceneKeys';
-import type { TaskConfig, TaskDefinition, TaskResult, WorkdaySceneData } from '../types/TaskTypes';
+import type { TaskConfig, TaskResult, WorkdaySceneData } from '../types/TaskTypes';
 
 type OfficeLayout = {
   scale: number;
@@ -47,6 +51,11 @@ export class WorkdayScene extends Phaser.Scene {
   private editorFrameSelect?: HTMLSelectElement;
   private editorStatus?: HTMLDivElement;
   private workdayUiRoot?: HTMLElement;
+  private assignedTaskRoot?: HTMLDivElement;
+  private incomingCountValue?: HTMLDivElement;
+  private incomingDetailValue?: HTMLDivElement;
+  private taskRefreshTimer?: Phaser.Time.TimerEvent;
+  private activeDifficulty = 1;
 
   constructor() {
     super(SceneKeys.workday);
@@ -89,6 +98,12 @@ export class WorkdayScene extends Phaser.Scene {
     GameState.clampVitals();
   }
 
+  private applyExpiredTaskResults(results: TaskResult[]): void {
+    for (const result of results) {
+      this.applyTaskResult(result);
+    }
+  }
+
   private routeNext(): void {
     const state = GameState.data;
 
@@ -113,14 +128,21 @@ export class WorkdayScene extends Phaser.Scene {
   private showTaskSelection(): void {
     const state = GameState.data;
     const difficulty = DifficultySystem.getDifficulty(state.completedTasks + state.failedTasks);
-    const eligibleTasks = TaskRegistry.filter(
-      (task) => difficulty >= task.minDifficulty && difficulty <= task.maxDifficulty,
-    );
+    this.activeDifficulty = difficulty;
 
-    this.mountWorkdayUi(eligibleTasks, difficulty);
+    const expiredResults = workdayTaskQueue.sync(difficulty);
+    if (expiredResults.length > 0) {
+      this.applyExpiredTaskResults(expiredResults);
+      this.routeNext();
+      return;
+    }
+
+    this.mountWorkdayUi(difficulty);
+    this.mountAssignedTaskUi();
+    this.startTaskRefresh();
   }
 
-  private mountWorkdayUi(eligibleTasks: TaskDefinition[], difficulty: number): void {
+  private mountWorkdayUi(difficulty: number): void {
     const app = document.querySelector<HTMLDivElement>('#app');
     if (!app) {
       return;
@@ -158,26 +180,44 @@ export class WorkdayScene extends Phaser.Scene {
       this.createSidebarHeader(),
       this.createTimeCard(currentHour, tasksLeft),
       this.createStatusMeters(),
-      this.createTaskList(eligibleTasks, difficulty),
+      this.createQueueStatusCard(difficulty),
     );
 
     app.append(root);
     this.workdayUiRoot = root;
   }
 
-  private selectTask(task: TaskDefinition, difficulty: number): void {
+  private selectTask(assignment: AssignedWorkdayTask): void {
+    const nowMs = Date.now();
+    const expiredResults = workdayTaskQueue.sync(this.activeDifficulty, nowMs);
+    if (expiredResults.length > 0) {
+      this.applyExpiredTaskResults(expiredResults);
+      this.routeNext();
+      return;
+    }
+
+    const claimedAssignment = workdayTaskQueue.claim(assignment.instanceId, nowMs);
+    if (!claimedAssignment) {
+      this.renderAssignedTasks();
+      return;
+    }
+
     const state = GameState.data;
+    const task = claimedAssignment.task;
     const taskConfig: TaskConfig = {
       id: task.id,
       displayName: task.displayName,
       baseTimeLimit: task.baseTimeLimit,
-      actualTimeLimit: this.getActualTimeLimit(task, difficulty),
-      difficulty,
+      actualTimeLimit: WORKDAY_TASK_TIME_LIMIT_SECONDS,
+      difficulty: claimedAssignment.difficulty,
       sanityAtStart: state.sanity,
       rageAtStart: state.rage,
+      taskInstanceId: claimedAssignment.instanceId,
+      deadlineAtMs: claimedAssignment.expiresAtMs,
+      assignmentTimeLimit: WORKDAY_TASK_TIME_LIMIT_SECONDS,
     };
 
-    state.difficultyLevel = difficulty;
+    state.difficultyLevel = claimedAssignment.difficulty;
     GameState.setCurrentTask(task.id);
 
     SceneTransitionService.start(this, {
@@ -346,7 +386,7 @@ export class WorkdayScene extends Phaser.Scene {
     title.style.lineHeight = '1';
 
     const subtitle = document.createElement('div');
-    subtitle.textContent = 'Pick the next interruption before the day picks one for you.';
+    subtitle.textContent = 'Interruptions are already circling.';
     subtitle.style.color = '#cdd8d5';
     subtitle.style.font = '600 13px Arial, sans-serif';
     subtitle.style.lineHeight = '1.35';
@@ -398,6 +438,41 @@ export class WorkdayScene extends Phaser.Scene {
     return section;
   }
 
+  private createQueueStatusCard(difficulty: number): HTMLElement {
+    const section = this.createSidebarSection();
+
+    const count = document.createElement('div');
+    count.style.marginTop = '8px';
+    count.style.font = '900 28px Arial, sans-serif';
+    count.style.lineHeight = '1';
+
+    const detail = document.createElement('div');
+    detail.style.marginTop = '8px';
+    detail.style.color = '#9ed8db';
+    detail.style.font = '800 13px Arial, sans-serif';
+
+    this.incomingCountValue = count;
+    this.incomingDetailValue = detail;
+    this.updateQueueStatusCard(difficulty);
+
+    section.append(this.createSectionLabel('Incoming'), count, detail);
+    return section;
+  }
+
+  private updateQueueStatusCard(difficulty: number): void {
+    const activeCount = workdayTaskQueue.getAssignments().length;
+    const nextSeconds = workdayTaskQueue.getNextAssignmentSeconds();
+
+    if (this.incomingCountValue) {
+      this.incomingCountValue.textContent = `${activeCount} active`;
+      this.incomingCountValue.style.color = activeCount > 0 ? '#ffdfdf' : '#f8f5f0';
+    }
+
+    if (this.incomingDetailValue) {
+      this.incomingDetailValue.textContent = `Next ping ${Math.ceil(nextSeconds)}s | Difficulty ${difficulty}`;
+    }
+  }
+
   private handleRageTestKeyDown(event: KeyboardEvent): void {
     if (event.repeat) {
       return;
@@ -415,69 +490,149 @@ export class WorkdayScene extends Phaser.Scene {
     SceneTransitionService.start(this, { kind: 'immediate', target: SceneKeys.rageTransition });
   }
 
-  private createTaskList(eligibleTasks: TaskDefinition[], difficulty: number): HTMLElement {
-    const section = this.createSidebarSection();
-    section.style.flex = '1';
-    section.style.minHeight = '0';
-    section.style.overflow = 'auto';
-    section.append(this.createSectionLabel('Available Tasks'));
+  private startTaskRefresh(): void {
+    if (this.taskRefreshTimer) {
+      return;
+    }
 
-    if (eligibleTasks.length === 0) {
-      const empty = document.createElement('div');
-      empty.textContent = 'No tasks available.';
-      empty.style.marginTop = '10px';
-      empty.style.color = '#cdd8d5';
-      empty.style.font = '700 14px Arial, sans-serif';
-      section.append(empty);
-      return section;
+    this.taskRefreshTimer = this.time.addEvent({
+      delay: 100,
+      loop: true,
+      callback: this.refreshAssignedTasks,
+      callbackScope: this,
+    });
+  }
+
+  private refreshAssignedTasks(): void {
+    const expiredResults = workdayTaskQueue.sync(this.activeDifficulty);
+    if (expiredResults.length > 0) {
+      this.applyExpiredTaskResults(expiredResults);
+      this.routeNext();
+      return;
+    }
+
+    this.renderAssignedTasks();
+    this.updateQueueStatusCard(this.activeDifficulty);
+  }
+
+  private mountAssignedTaskUi(): void {
+    const app = document.querySelector<HTMLDivElement>('#app');
+    if (!app) {
+      return;
+    }
+
+    this.assignedTaskRoot?.remove();
+
+    const root = document.createElement('div');
+    root.setAttribute('aria-label', 'Incoming tasks');
+    root.style.position = 'absolute';
+    root.style.top = '14px';
+    root.style.left = `${this.getSidebarWidth() + WORKDAY_PANEL_GAP}px`;
+    root.style.right = '14px';
+    root.style.zIndex = '4';
+    root.style.display = 'grid';
+    root.style.gap = '8px';
+    root.style.pointerEvents = 'auto';
+    root.style.userSelect = 'none';
+    root.style.fontFamily = 'Arial, Helvetica, sans-serif';
+    root.addEventListener('pointerdown', (event) => event.stopPropagation());
+    root.addEventListener('click', (event) => event.stopPropagation());
+
+    app.append(root);
+    this.assignedTaskRoot = root;
+    this.renderAssignedTasks();
+  }
+
+  private renderAssignedTasks(): void {
+    if (!this.assignedTaskRoot) {
+      return;
+    }
+
+    const assignments = workdayTaskQueue.getAssignments();
+    this.assignedTaskRoot.replaceChildren();
+
+    if (assignments.length === 0) {
+      const idle = document.createElement('div');
+      idle.textContent = `Next ping ${Math.ceil(workdayTaskQueue.getNextAssignmentSeconds())}s`;
+      idle.style.justifySelf = 'center';
+      idle.style.padding = '10px 14px';
+      idle.style.background = 'rgba(16, 24, 32, 0.76)';
+      idle.style.border = '1px solid rgba(248, 245, 240, 0.24)';
+      idle.style.color = '#cdd8d5';
+      idle.style.font = '900 13px Arial, sans-serif';
+      this.assignedTaskRoot.append(idle);
+      return;
     }
 
     const list = document.createElement('div');
-    list.style.display = 'grid';
+    list.style.display = 'flex';
+    list.style.flexWrap = 'wrap';
     list.style.gap = '10px';
-    list.style.marginTop = '10px';
 
-    for (const task of eligibleTasks) {
-      list.append(this.createTaskListButton(task, difficulty));
+    for (const assignment of assignments) {
+      list.append(this.createAssignedTaskButton(assignment));
     }
 
-    section.append(list);
-    return section;
+    this.assignedTaskRoot.append(list);
   }
 
-  private createTaskListButton(task: TaskDefinition, difficulty: number): HTMLButtonElement {
-    const timeLimit = this.getActualTimeLimit(task, difficulty);
+  private createAssignedTaskButton(assignment: AssignedWorkdayTask): HTMLButtonElement {
+    const remaining = workdayTaskQueue.getTaskTimeRemainingSeconds(assignment);
+    const isCritical = remaining <= 10;
+    const flashOn = isCritical && Math.floor(Date.now() / 250) % 2 === 0;
+    const progress = Phaser.Math.Clamp((remaining / WORKDAY_TASK_TIME_LIMIT_SECONDS) * 100, 0, 100);
     const button = document.createElement('button');
     button.type = 'button';
     button.style.display = 'grid';
-    button.style.gap = '5px';
-    button.style.width = '100%';
-    button.style.minHeight = '74px';
+    button.style.gap = '8px';
+    button.style.width = '280px';
+    button.style.maxWidth = 'calc(100vw - 28px)';
+    button.style.minHeight = '82px';
     button.style.padding = '12px';
-    button.style.border = '1px solid rgba(242, 193, 78, 0.7)';
-    button.style.background = 'rgba(42, 58, 74, 0.92)';
+    button.style.border = `2px solid ${isCritical ? '#e74c3c' : 'rgba(242, 193, 78, 0.92)'}`;
+    button.style.background = flashOn ? '#e74c3c' : 'rgba(16, 24, 32, 0.92)';
     button.style.color = '#f8f5f0';
     button.style.textAlign = 'left';
     button.style.cursor = 'pointer';
+    button.style.boxShadow = flashOn ? '0 0 0 4px rgba(231, 76, 60, 0.22)' : '0 12px 28px rgba(0, 0, 0, 0.34)';
     button.style.fontFamily = 'Arial, Helvetica, sans-serif';
 
+    const row = document.createElement('div');
+    row.style.display = 'grid';
+    row.style.gridTemplateColumns = '1fr auto';
+    row.style.gap = '10px';
+    row.style.alignItems = 'center';
+
     const title = document.createElement('span');
-    title.textContent = task.displayName;
+    title.textContent = assignment.task.displayName;
     title.style.font = '900 16px Arial, sans-serif';
 
-    const detail = document.createElement('span');
-    detail.textContent = `${timeLimit.toFixed(1)}s timer | difficulty ${difficulty}`;
-    detail.style.color = '#9ed8db';
-    detail.style.font = '800 12px Arial, sans-serif';
+    const time = document.createElement('span');
+    time.textContent = `${Math.ceil(remaining)}s`;
+    time.style.color = isCritical ? '#fff2a8' : '#9ed8db';
+    time.style.font = '900 18px Arial, sans-serif';
 
-    button.append(title, detail);
-    button.addEventListener('click', () => this.selectTask(task, difficulty));
+    const track = document.createElement('div');
+    track.style.height = '8px';
+    track.style.overflow = 'hidden';
+    track.style.background = 'rgba(248, 245, 240, 0.14)';
+
+    const fill = document.createElement('div');
+    fill.style.width = `${progress}%`;
+    fill.style.height = '100%';
+    fill.style.background = isCritical ? '#e74c3c' : '#f2c14e';
+
+    row.append(title, time);
+    track.append(fill);
+    button.append(row, track);
+    button.addEventListener('pointerdown', (event) => {
+      event.stopPropagation();
+      this.selectTask(assignment);
+    });
     button.addEventListener('pointerover', () => {
-      button.style.background = 'rgba(58, 74, 90, 0.98)';
-      button.style.transform = 'translateY(-1px)';
+      button.style.transform = 'translateY(-2px)';
     });
     button.addEventListener('pointerout', () => {
-      button.style.background = 'rgba(42, 58, 74, 0.92)';
       button.style.transform = 'translateY(0)';
     });
 
@@ -549,20 +704,31 @@ export class WorkdayScene extends Phaser.Scene {
     root.style.right = '12px';
     root.style.zIndex = '5';
     root.style.display = 'grid';
+    root.style.justifyItems = 'end';
     root.style.gap = '8px';
-    root.style.width = 'min(300px, calc(100vw - 24px))';
+    root.style.width = 'auto';
     root.style.font = '700 13px Arial, sans-serif';
     root.style.color = '#f8f5f0';
     root.style.pointerEvents = 'auto';
     root.addEventListener('pointerdown', (event) => event.stopPropagation());
     root.addEventListener('click', (event) => event.stopPropagation());
 
-    const toggle = this.createEditorButton('Edit Scene');
+    const toggle = this.createEditorButton('✎');
+    toggle.setAttribute('aria-label', 'Edit room');
+    toggle.title = 'Edit room';
+    toggle.style.width = '40px';
+    toggle.style.minWidth = '40px';
+    toggle.style.height = '40px';
+    toggle.style.minHeight = '40px';
+    toggle.style.padding = '0';
+    toggle.style.font = '900 18px Arial, sans-serif';
+    toggle.style.lineHeight = '1';
     toggle.addEventListener('click', () => this.setEditorEnabled(!this.editorEnabled));
 
     const panel = document.createElement('div');
     panel.style.display = 'none';
     panel.style.gap = '8px';
+    panel.style.width = 'min(300px, calc(100vw - 24px))';
     panel.style.padding = '12px';
     panel.style.background = 'rgba(16, 24, 32, 0.92)';
     panel.style.border = '1px solid rgba(242, 193, 78, 0.65)';
@@ -689,11 +855,17 @@ export class WorkdayScene extends Phaser.Scene {
     }
 
     if (this.editorToggleButton) {
-      this.editorToggleButton.textContent = enabled ? 'Done Editing' : 'Edit Scene';
+      this.editorToggleButton.textContent = enabled ? 'X' : '✎';
+      this.editorToggleButton.setAttribute('aria-label', enabled ? 'Close room editor' : 'Edit room');
+      this.editorToggleButton.title = enabled ? 'Close room editor' : 'Edit room';
     }
 
     if (this.workdayUiRoot) {
       this.workdayUiRoot.style.display = enabled ? 'none' : 'flex';
+    }
+
+    if (this.assignedTaskRoot) {
+      this.assignedTaskRoot.style.display = enabled ? 'none' : 'grid';
     }
 
     for (const item of this.officeItems) {
@@ -967,28 +1139,16 @@ export class WorkdayScene extends Phaser.Scene {
     return OFFICE_DEPTH + Math.round(y * layout.scale);
   }
 
-  private getActualTimeLimit(task: TaskDefinition, difficulty: number): number {
-    const sanityAdjustedTime = SanitySystem.getActualTimeLimit(task.baseTimeLimit, GameState.data.sanity);
-
-    if (!task.difficultyTimeScale) {
-      return sanityAdjustedTime;
-    }
-
-    const difficultyRange = Math.max(1, task.maxDifficulty - task.minDifficulty);
-    const difficultyProgress = Phaser.Math.Clamp((difficulty - task.minDifficulty) / difficultyRange, 0, 1);
-    const difficultyMultiplier = Phaser.Math.Linear(
-      task.difficultyTimeScale.maxMultiplier,
-      task.difficultyTimeScale.minMultiplier,
-      difficultyProgress,
-    );
-
-    return sanityAdjustedTime * difficultyMultiplier;
-  }
-
   private cleanup(): void {
     this.input.keyboard?.off('keydown-R', this.handleRageTestKeyDown, this);
+    this.taskRefreshTimer?.remove();
     this.workdayUiRoot?.remove();
     this.workdayUiRoot = undefined;
+    this.assignedTaskRoot?.remove();
+    this.assignedTaskRoot = undefined;
+    this.incomingCountValue = undefined;
+    this.incomingDetailValue = undefined;
+    this.taskRefreshTimer = undefined;
     this.editorRoot?.remove();
     this.editorRoot = undefined;
     this.editorPanel = undefined;

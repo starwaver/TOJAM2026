@@ -10,7 +10,7 @@ export class TaskDirector {
     const eligibleTasks = this.tasks.filter((task) => difficulty >= task.minDifficulty && difficulty <= task.maxDifficulty);
     const availableTasks = eligibleTasks.filter((task) => !this.recentTaskIds.includes(task.id));
     const pool = availableTasks.length > 0 ? availableTasks : eligibleTasks;
-    const task = pool[0] ?? this.tasks[0];
+    const task = pool[Math.floor(Math.random() * pool.length)] ?? this.tasks[0];
 
     this.remember(task.id);
     return task;
