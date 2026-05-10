@@ -1,7 +1,7 @@
 export const BalanceConfig = {
   maxSanity: 100,
   maxRage: 100,
-  minTimeMultiplier: 0.35,
+  minTimeMultiplier: 0.4,
   maxTimeMultiplier: 1,
   // Sanity loss on success: baseSanityLoss + panicSanityLoss * (1 - timeRemainingRatio)
   // More time remaining = less panic = less sanity lost

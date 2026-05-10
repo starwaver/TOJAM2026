@@ -6,9 +6,13 @@ export const TaskRegistry: TaskDefinition[] = [
     id: 'slide_deck_disaster',
     displayName: 'Slide Deck Disaster',
     scene: SceneKeys.slideDeckDisaster,
-    baseTimeLimit: 30,
+    baseTimeLimit: 15,
     minDifficulty: 1,
     maxDifficulty: 10,
+    difficultyTimeScale: {
+      minMultiplier: 0.65,
+      maxMultiplier: 1,
+    },
   },
   {
     id: 'coffee_run',

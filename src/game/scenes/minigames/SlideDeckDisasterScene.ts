@@ -76,8 +76,8 @@ export class SlideDeckDisasterScene extends BaseMiniGameScene {
   };
   private running = false;
   private resultShown = false;
-  private timeLeft = 30;
-  private duration = 30;
+  private timeLeft = 15;
+  private duration = 15;
   private fontMode = 0;
   private bossLineTime = 0;
   private notificationTime = 0;
@@ -96,7 +96,7 @@ export class SlideDeckDisasterScene extends BaseMiniGameScene {
 
   init(data: MiniGameSceneData = {}): void {
     super.init(data);
-    this.duration = data.taskConfig?.actualTimeLimit ?? 30;
+    this.duration = data.taskConfig?.actualTimeLimit ?? 15;
     this.timeLeft = this.duration;
   }
 
@@ -124,7 +124,7 @@ export class SlideDeckDisasterScene extends BaseMiniGameScene {
 
     this.timeLeft -= dt;
 
-    if (this.notificationTime > 10) {
+    if (this.notificationTime > 5) {
       this.notificationTime = 0;
       this.showMeetingNotification();
     }
@@ -622,10 +622,12 @@ export class SlideDeckDisasterScene extends BaseMiniGameScene {
       this.timeFill.style.width = `${Math.round(timeRatio)}%`;
     }
 
-    this.timerPanel?.classList.toggle('is-urgent', timeLeft <= 12 && timeLeft > 6);
-    this.timerPanel?.classList.toggle('is-critical', timeLeft <= 6);
-    this.stageWrap?.classList.toggle('is-urgent', timeLeft <= 12 && timeLeft > 6);
-    this.stageWrap?.classList.toggle('is-critical', timeLeft <= 6);
+    const urgentThreshold = duration * 0.8;
+    const criticalThreshold = duration * 0.4;
+    this.timerPanel?.classList.toggle('is-urgent', timeLeft <= urgentThreshold && timeLeft > criticalThreshold);
+    this.timerPanel?.classList.toggle('is-critical', timeLeft <= criticalThreshold);
+    this.stageWrap?.classList.toggle('is-urgent', timeLeft <= urgentThreshold && timeLeft > criticalThreshold);
+    this.stageWrap?.classList.toggle('is-critical', timeLeft <= criticalThreshold);
 
     if (!this.meetingStatus) {
       return;
@@ -775,7 +777,7 @@ export class SlideDeckDisasterScene extends BaseMiniGameScene {
           </div>
           <div class="slide-deck__meeting-timer">
             <div class="slide-deck__meeting-kicker">MEETING STARTS IN</div>
-            <div class="slide-deck__meeting-clock"><span data-role="time-text">00:30.0</span></div>
+            <div class="slide-deck__meeting-clock"><span data-role="time-text">00:15.0</span></div>
             <div class="slide-deck__meeting-status" data-role="meeting-status">Stakeholders are joining the call.</div>
             <div class="slide-deck__meeting-progress"><div class="slide-deck__meeting-fill" data-role="time-fill"></div></div>
           </div>
