@@ -41,6 +41,8 @@ const OFFICE_BACKGROUND_HEIGHT = 1086;
 const OFFICE_DEPTH = 100;
 const UI_DEPTH = 5000;
 const OFFICE_LAYOUT_STORAGE_KEY = 'tojam2026.workdayOfficeLayout.v1';
+const WORKDAY_START_HOUR = 8;
+const WORKDAY_PANEL_GAP = 18;
 
 const DEFAULT_OFFICE_ITEMS: OfficeSceneItem[] = [
   { id: 'plant-left', kind: 'atlas', frame: OfficeAssetFrames.tallPottedPlant, x: 108, y: 282, scale: 1.45 },
@@ -63,23 +65,19 @@ const DEFAULT_OFFICE_ITEMS: OfficeSceneItem[] = [
   { id: 'boss', kind: 'boss', x: 1278, y: 378, scale: 1.35 },
 ];
 
-type VisibleGameObject = Phaser.GameObjects.GameObject & {
-  setVisible(value: boolean): VisibleGameObject;
-};
-
 export class WorkdayScene extends Phaser.Scene {
   private taskResult?: TaskResult;
   private officeLayout?: OfficeLayout;
   private officeItems: RenderedOfficeItem[] = [];
   private selectedItemId?: string;
   private selectionBox?: Phaser.GameObjects.Rectangle;
-  private taskUiObjects: VisibleGameObject[] = [];
   private editorEnabled = false;
   private editorRoot?: HTMLDivElement;
   private editorPanel?: HTMLDivElement;
   private editorToggleButton?: HTMLButtonElement;
   private editorFrameSelect?: HTMLSelectElement;
   private editorStatus?: HTMLDivElement;
+  private workdayUiRoot?: HTMLElement;
 
   constructor() {
     super(SceneKeys.workday);
@@ -145,166 +143,56 @@ export class WorkdayScene extends Phaser.Scene {
   private showTaskSelection(): void {
     const state = GameState.data;
     const difficulty = DifficultySystem.getDifficulty(state.completedTasks + state.failedTasks);
-    const cx = this.scale.width / 2;
-    const panelWidth = Math.min(430, this.scale.width - 32);
-    const panelHeight = Math.min(560, this.scale.height - 36);
-    const panelY = Math.max(18, this.scale.height / 2 - panelHeight / 2);
-    const titleY = panelY + 38;
-    const progressY = panelY + 76;
-
-    this.addTaskUiObject(
-      this.add
-        .rectangle(cx, panelY + panelHeight / 2, panelWidth, panelHeight, 0x101820, 0.82)
-        .setStrokeStyle(2, 0xf2c14e, 0.45)
-        .setDepth(UI_DEPTH - 1),
-    );
-
-    this.addTaskUiObject(
-      this.add
-        .text(cx, titleY, "BOSS'S TASKS", {
-          fontFamily: 'Arial, sans-serif',
-          fontSize: '32px',
-          fontStyle: '700',
-          color: '#f2c14e',
-        })
-        .setOrigin(0.5)
-        .setDepth(UI_DEPTH),
-    );
-
-    this.addTaskUiObject(
-      this.add
-        .text(cx, progressY, `Day Progress: ${Math.round(state.dayProgress)}%`, {
-          fontFamily: 'Arial, sans-serif',
-          fontSize: '16px',
-          color: '#9ed8db',
-        })
-        .setOrigin(0.5)
-        .setDepth(UI_DEPTH),
-    );
-
-    const meterWidth = 220;
-    const meterHeight = 18;
-    const meterX = cx - meterWidth / 2;
-
-    const sanityY = panelY + 132;
-    this.createMeter(
-      `Sanity: ${Math.round(state.sanity)}/${BalanceConfig.maxSanity}`,
-      state.sanity,
-      BalanceConfig.maxSanity,
-      meterX,
-      sanityY,
-      meterWidth,
-      meterHeight,
-      0x4ecdc4,
-      '#4ecdc4',
-    );
-
-    const rageY = sanityY + 56;
-    this.createMeter(
-      `Rage: ${Math.round(state.rage)}/${BalanceConfig.maxRage}`,
-      state.rage,
-      BalanceConfig.maxRage,
-      meterX,
-      rageY,
-      meterWidth,
-      meterHeight,
-      0xe74c3c,
-      '#e74c3c',
-    );
-
     const eligibleTasks = TaskRegistry.filter(
       (task) => difficulty >= task.minDifficulty && difficulty <= task.maxDifficulty,
     );
 
-    const startY = rageY + 78;
-    const buttonSpacing = 72;
+    this.mountWorkdayUi(eligibleTasks, difficulty);
+  }
 
-    if (eligibleTasks.length === 0) {
-      this.addTaskUiObject(
-        this.add
-          .text(cx, startY, 'No tasks available!', {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '18px',
-            color: '#f8f5f0',
-          })
-          .setOrigin(0.5)
-          .setDepth(UI_DEPTH),
-      );
+  private mountWorkdayUi(eligibleTasks: TaskDefinition[], difficulty: number): void {
+    const app = document.querySelector<HTMLDivElement>('#app');
+    if (!app) {
       return;
     }
 
-    eligibleTasks.forEach((task, index) => {
-      const y = startY + index * buttonSpacing;
-      this.createTaskButton(task, cx, y, difficulty);
-    });
-  }
+    this.workdayUiRoot?.remove();
 
-  private createMeter(
-    label: string,
-    value: number,
-    maxValue: number,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    fillColor: number,
-    labelColor: string,
-  ): void {
-    this.addTaskUiObject(
-      this.add
-        .text(x, y - 32, label, {
-          fontFamily: 'Arial, sans-serif',
-          fontSize: '14px',
-          fontStyle: '700',
-          color: labelColor,
-        })
-        .setDepth(UI_DEPTH),
+    const root = document.createElement('aside');
+    root.setAttribute('aria-label', 'Workday command center');
+    root.style.position = 'absolute';
+    root.style.left = '14px';
+    root.style.top = '14px';
+    root.style.bottom = '14px';
+    root.style.width = `${this.getSidebarWidth() - 28}px`;
+    root.style.zIndex = '4';
+    root.style.display = 'flex';
+    root.style.flexDirection = 'column';
+    root.style.gap = '14px';
+    root.style.padding = '16px';
+    root.style.boxSizing = 'border-box';
+    root.style.background = 'rgba(14, 22, 25, 0.94)';
+    root.style.border = '1px solid rgba(242, 193, 78, 0.5)';
+    root.style.boxShadow = '0 18px 45px rgba(0, 0, 0, 0.38)';
+    root.style.color = '#f8f5f0';
+    root.style.fontFamily = 'Arial, Helvetica, sans-serif';
+    root.style.pointerEvents = 'auto';
+    root.style.userSelect = 'none';
+    root.addEventListener('pointerdown', (event) => event.stopPropagation());
+    root.addEventListener('click', (event) => event.stopPropagation());
+
+    const tasksLeft = this.getTasksLeft();
+    const currentHour = WORKDAY_START_HOUR + (this.getTotalWorkdayTasks() - tasksLeft);
+
+    root.append(
+      this.createSidebarHeader(),
+      this.createTimeCard(currentHour, tasksLeft),
+      this.createStatusMeters(),
+      this.createTaskList(eligibleTasks, difficulty),
     );
 
-    this.addTaskUiObject(this.add.rectangle(x, y, width, height, 0x2a3a4a).setOrigin(0, 0.5).setDepth(UI_DEPTH));
-    const fillWidth = Phaser.Math.Clamp(value / maxValue, 0, 1) * width;
-    this.addTaskUiObject(this.add.rectangle(x, y, fillWidth, height, fillColor).setOrigin(0, 0.5).setDepth(UI_DEPTH));
-  }
-
-  private createTaskButton(task: TaskDefinition, x: number, y: number, difficulty: number): void {
-    const state = GameState.data;
-    const buttonWidth = 320;
-    const buttonHeight = 58;
-
-    const bg = this.add
-      .rectangle(x, y, buttonWidth, buttonHeight, 0x2a3a4a)
-      .setStrokeStyle(2, 0xf2c14e)
-      .setInteractive({ useHandCursor: true });
-
-    const label = this.add
-      .text(x, y - 10, task.displayName, {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '18px',
-        fontStyle: '700',
-        color: '#f8f5f0',
-      })
-      .setOrigin(0.5);
-
-    const timeLimit = SanitySystem.getActualTimeLimit(task.baseTimeLimit, state.sanity);
-    const subLabel = this.add
-      .text(x, y + 14, `Time: ${timeLimit.toFixed(1)}s  |  Difficulty: ${difficulty}`, {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '12px',
-        color: '#9ed8db',
-      })
-      .setOrigin(0.5);
-
-    const button = this.add.container(0, 0, [bg, label, subLabel]).setDepth(UI_DEPTH);
-    bg.setDepth(UI_DEPTH);
-    label.setDepth(UI_DEPTH + 1);
-    subLabel.setDepth(UI_DEPTH + 1);
-    this.addTaskUiObject(button);
-
-    bg.on('pointerdown', () => {
-      this.selectTask(task, difficulty);
-    });
-    bg.on('pointerover', () => bg.setFillStyle(0x3a4a5a));
-    bg.on('pointerout', () => bg.setFillStyle(0x2a3a4a));
+    app.append(root);
+    this.workdayUiRoot = root;
   }
 
   private selectTask(task: TaskDefinition, difficulty: number): void {
@@ -359,7 +247,9 @@ export class WorkdayScene extends Phaser.Scene {
   }
 
   private getOfficeLayout(): OfficeLayout {
-    const scale = Math.min(this.scale.width / OFFICE_BACKGROUND_WIDTH, this.scale.height / OFFICE_BACKGROUND_HEIGHT);
+    const sidebarWidth = this.getSidebarWidth();
+    const availableWidth = Math.max(320, this.scale.width - sidebarWidth - WORKDAY_PANEL_GAP);
+    const scale = Math.min(availableWidth / OFFICE_BACKGROUND_WIDTH, this.scale.height / OFFICE_BACKGROUND_HEIGHT);
     const width = OFFICE_BACKGROUND_WIDTH * scale;
     const height = OFFICE_BACKGROUND_HEIGHT * scale;
 
@@ -367,7 +257,7 @@ export class WorkdayScene extends Phaser.Scene {
       scale,
       width,
       height,
-      offsetX: (this.scale.width - width) / 2,
+      offsetX: sidebarWidth + WORKDAY_PANEL_GAP + (availableWidth - width) / 2,
       offsetY: (this.scale.height - height) / 2,
     };
   }
@@ -467,6 +357,200 @@ export class WorkdayScene extends Phaser.Scene {
     return character;
   }
 
+  private createSidebarHeader(): HTMLElement {
+    const header = document.createElement('header');
+    header.style.display = 'grid';
+    header.style.gap = '4px';
+
+    const eyebrow = document.createElement('div');
+    eyebrow.textContent = 'WORKDAY';
+    eyebrow.style.color = '#9ed8db';
+    eyebrow.style.font = '800 11px Arial, sans-serif';
+    eyebrow.style.letterSpacing = '0.12em';
+
+    const title = document.createElement('h1');
+    title.textContent = "Boss's Tasks";
+    title.style.margin = '0';
+    title.style.color = '#f2c14e';
+    title.style.font = '900 30px Arial, sans-serif';
+    title.style.lineHeight = '1';
+
+    const subtitle = document.createElement('div');
+    subtitle.textContent = 'Pick the next interruption before the day picks one for you.';
+    subtitle.style.color = '#cdd8d5';
+    subtitle.style.font = '600 13px Arial, sans-serif';
+    subtitle.style.lineHeight = '1.35';
+
+    header.append(eyebrow, title, subtitle);
+    return header;
+  }
+
+  private createTimeCard(currentHour: number, tasksLeft: number): HTMLElement {
+    const card = this.createSidebarSection();
+    const label = this.createSectionLabel('Time of Day');
+
+    const clock = document.createElement('div');
+    clock.textContent = this.formatHour(currentHour);
+    clock.style.marginTop = '8px';
+    clock.style.color = '#f8f5f0';
+    clock.style.font = '900 42px Arial, sans-serif';
+    clock.style.lineHeight = '0.95';
+
+    const remaining = document.createElement('div');
+    remaining.textContent = `${tasksLeft} ${tasksLeft === 1 ? 'hour' : 'hours'} left`;
+    remaining.style.marginTop = '6px';
+    remaining.style.color = '#9ed8db';
+    remaining.style.font = '800 15px Arial, sans-serif';
+
+    const progressTrack = document.createElement('div');
+    progressTrack.style.height = '8px';
+    progressTrack.style.marginTop = '12px';
+    progressTrack.style.overflow = 'hidden';
+    progressTrack.style.background = 'rgba(248, 245, 240, 0.14)';
+
+    const progressFill = document.createElement('div');
+    progressFill.style.width = `${Phaser.Math.Clamp(GameState.data.dayProgress / BalanceConfig.dayCompleteProgress, 0, 1) * 100}%`;
+    progressFill.style.height = '100%';
+    progressFill.style.background = '#f2c14e';
+    progressTrack.append(progressFill);
+
+    card.append(label, clock, remaining, progressTrack);
+    return card;
+  }
+
+  private createStatusMeters(): HTMLElement {
+    const section = this.createSidebarSection();
+    section.append(
+      this.createSectionLabel('Vitals'),
+      this.createDomMeter('Sanity', GameState.data.sanity, BalanceConfig.maxSanity, '#4ecdc4'),
+      this.createDomMeter('Rage', GameState.data.rage, BalanceConfig.maxRage, '#e74c3c'),
+    );
+    return section;
+  }
+
+  private createTaskList(eligibleTasks: TaskDefinition[], difficulty: number): HTMLElement {
+    const section = this.createSidebarSection();
+    section.style.flex = '1';
+    section.style.minHeight = '0';
+    section.style.overflow = 'auto';
+    section.append(this.createSectionLabel('Available Tasks'));
+
+    if (eligibleTasks.length === 0) {
+      const empty = document.createElement('div');
+      empty.textContent = 'No tasks available.';
+      empty.style.marginTop = '10px';
+      empty.style.color = '#cdd8d5';
+      empty.style.font = '700 14px Arial, sans-serif';
+      section.append(empty);
+      return section;
+    }
+
+    const list = document.createElement('div');
+    list.style.display = 'grid';
+    list.style.gap = '10px';
+    list.style.marginTop = '10px';
+
+    for (const task of eligibleTasks) {
+      list.append(this.createTaskListButton(task, difficulty));
+    }
+
+    section.append(list);
+    return section;
+  }
+
+  private createTaskListButton(task: TaskDefinition, difficulty: number): HTMLButtonElement {
+    const state = GameState.data;
+    const timeLimit = SanitySystem.getActualTimeLimit(task.baseTimeLimit, state.sanity);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.style.display = 'grid';
+    button.style.gap = '5px';
+    button.style.width = '100%';
+    button.style.minHeight = '74px';
+    button.style.padding = '12px';
+    button.style.border = '1px solid rgba(242, 193, 78, 0.7)';
+    button.style.background = 'rgba(42, 58, 74, 0.92)';
+    button.style.color = '#f8f5f0';
+    button.style.textAlign = 'left';
+    button.style.cursor = 'pointer';
+    button.style.fontFamily = 'Arial, Helvetica, sans-serif';
+
+    const title = document.createElement('span');
+    title.textContent = task.displayName;
+    title.style.font = '900 16px Arial, sans-serif';
+
+    const detail = document.createElement('span');
+    detail.textContent = `${timeLimit.toFixed(1)}s timer | difficulty ${difficulty}`;
+    detail.style.color = '#9ed8db';
+    detail.style.font = '800 12px Arial, sans-serif';
+
+    button.append(title, detail);
+    button.addEventListener('click', () => this.selectTask(task, difficulty));
+    button.addEventListener('pointerover', () => {
+      button.style.background = 'rgba(58, 74, 90, 0.98)';
+      button.style.transform = 'translateY(-1px)';
+    });
+    button.addEventListener('pointerout', () => {
+      button.style.background = 'rgba(42, 58, 74, 0.92)';
+      button.style.transform = 'translateY(0)';
+    });
+
+    return button;
+  }
+
+  private createDomMeter(label: string, value: number, maxValue: number, color: string): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.style.display = 'grid';
+    wrap.style.gap = '7px';
+    wrap.style.marginTop = '12px';
+
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.justifyContent = 'space-between';
+    row.style.gap = '12px';
+    row.style.color = '#f8f5f0';
+    row.style.font = '800 13px Arial, sans-serif';
+
+    const name = document.createElement('span');
+    name.textContent = label;
+    const amount = document.createElement('span');
+    amount.textContent = `${Math.round(value)}/${maxValue}`;
+    amount.style.color = color;
+    row.append(name, amount);
+
+    const track = document.createElement('div');
+    track.style.height = '12px';
+    track.style.overflow = 'hidden';
+    track.style.background = 'rgba(248, 245, 240, 0.13)';
+
+    const fill = document.createElement('div');
+    fill.style.width = `${Phaser.Math.Clamp(value / maxValue, 0, 1) * 100}%`;
+    fill.style.height = '100%';
+    fill.style.background = color;
+    track.append(fill);
+    wrap.append(row, track);
+
+    return wrap;
+  }
+
+  private createSidebarSection(): HTMLDivElement {
+    const section = document.createElement('div');
+    section.style.padding = '14px';
+    section.style.background = 'rgba(248, 245, 240, 0.055)';
+    section.style.border = '1px solid rgba(248, 245, 240, 0.12)';
+    return section;
+  }
+
+  private createSectionLabel(label: string): HTMLDivElement {
+    const element = document.createElement('div');
+    element.textContent = label;
+    element.style.color = '#f2c14e';
+    element.style.font = '900 12px Arial, sans-serif';
+    element.style.letterSpacing = '0.08em';
+    element.style.textTransform = 'uppercase';
+    return element;
+  }
+
   private mountEditorUi(): void {
     const app = document.querySelector<HTMLDivElement>('#app');
     if (!app || this.editorRoot) {
@@ -476,7 +560,7 @@ export class WorkdayScene extends Phaser.Scene {
     const root = document.createElement('div');
     root.style.position = 'absolute';
     root.style.top = '12px';
-    root.style.left = '12px';
+    root.style.right = '12px';
     root.style.zIndex = '5';
     root.style.display = 'grid';
     root.style.gap = '8px';
@@ -613,12 +697,17 @@ export class WorkdayScene extends Phaser.Scene {
     this.editorEnabled = enabled;
     this.editorPanel?.style.setProperty('display', enabled ? 'grid' : 'none');
 
+    if (this.editorRoot) {
+      this.editorRoot.style.left = enabled ? '14px' : '';
+      this.editorRoot.style.right = enabled ? '' : '12px';
+    }
+
     if (this.editorToggleButton) {
       this.editorToggleButton.textContent = enabled ? 'Done Editing' : 'Edit Scene';
     }
 
-    for (const object of this.taskUiObjects) {
-      object.setVisible(!enabled);
+    if (this.workdayUiRoot) {
+      this.workdayUiRoot.style.display = enabled ? 'none' : 'flex';
     }
 
     for (const item of this.officeItems) {
@@ -834,12 +923,6 @@ export class WorkdayScene extends Phaser.Scene {
     return this.officeItems.find((item) => item.config.id === id);
   }
 
-  private addTaskUiObject<T extends VisibleGameObject>(object: T): T {
-    this.taskUiObjects.push(object);
-    object.setVisible(!this.editorEnabled);
-    return object;
-  }
-
   private createEditorButton(label: string): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
@@ -852,6 +935,30 @@ export class WorkdayScene extends Phaser.Scene {
     button.style.font = '800 13px Arial, sans-serif';
     button.style.cursor = 'pointer';
     return button;
+  }
+
+  private getSidebarWidth(): number {
+    if (this.scale.width < 760) {
+      return Math.min(300, Math.max(250, this.scale.width * 0.34));
+    }
+
+    return Math.min(360, Math.max(300, this.scale.width * 0.28));
+  }
+
+  private getTotalWorkdayTasks(): number {
+    return Math.ceil(BalanceConfig.dayCompleteProgress / BalanceConfig.dayProgressPerTask);
+  }
+
+  private getTasksLeft(): number {
+    const remainingProgress = Math.max(0, BalanceConfig.dayCompleteProgress - GameState.data.dayProgress);
+    return Math.ceil(remainingProgress / BalanceConfig.dayProgressPerTask);
+  }
+
+  private formatHour(hour: number): string {
+    const normalized = ((hour % 24) + 24) % 24;
+    const suffix = normalized >= 12 ? 'PM' : 'AM';
+    const displayHour = normalized % 12 || 12;
+    return `${displayHour}:00 ${suffix}`;
   }
 
   private officeX(layout: OfficeLayout, x: number): number {
@@ -875,6 +982,8 @@ export class WorkdayScene extends Phaser.Scene {
   }
 
   private cleanup(): void {
+    this.workdayUiRoot?.remove();
+    this.workdayUiRoot = undefined;
     this.editorRoot?.remove();
     this.editorRoot = undefined;
     this.editorPanel = undefined;
@@ -882,7 +991,6 @@ export class WorkdayScene extends Phaser.Scene {
     this.editorFrameSelect = undefined;
     this.editorStatus = undefined;
     this.officeItems = [];
-    this.taskUiObjects = [];
     this.selectedItemId = undefined;
     this.selectionBox = undefined;
   }
