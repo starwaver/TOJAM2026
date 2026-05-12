@@ -12,6 +12,8 @@ export class RageTransitionScene extends Phaser.Scene {
   private lineOne?: Phaser.GameObjects.Text;
   private lineTwo?: Phaser.GameObjects.Text;
   private impactText?: Phaser.GameObjects.Text;
+  private instructionText?: Phaser.GameObjects.Text;
+  private startButton?: Phaser.GameObjects.Text;
 
   constructor() {
     super(SceneKeys.rageTransition);
@@ -40,6 +42,12 @@ export class RageTransitionScene extends Phaser.Scene {
     this.lineOne = this.createBeatText('The room goes quiet.', 0.2, 30);
     this.lineTwo = this.createBeatText('All the swallowed panic finally burns.', 0.28, 24);
     this.impactText = this.createBeatText('YOU HAVE HAD ENOUGH', 0.82, 42);
+    this.instructionText = this.createBeatText(
+      'Instruction: Punch to launch your boss into office furniture and rack up points before time runs out.',
+      0.9,
+      22,
+    ).setAlpha(0);
+    this.startButton = this.createStartButton();
 
     this.layout();
   }
@@ -112,10 +120,55 @@ export class RageTransitionScene extends Phaser.Scene {
       this.flashPulse(0.9, 520);
     });
 
-    SceneTransitionService.start(this, {
-      kind: 'timed',
-      target: SceneKeys.bossFight,
-      durationMs: TRANSITION_DURATION_MS,
+    this.time.delayedCall(TRANSITION_DURATION_MS, () => {
+      this.revealStartPrompt();
+    });
+  }
+
+  private createStartButton(): Phaser.GameObjects.Text {
+    const button = this.add
+      .text(0, 0, 'Yeet your boss', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '34px',
+        fontStyle: '900',
+        color: '#fff3dc',
+        backgroundColor: '#7c0808',
+        padding: { left: 26, right: 26, top: 14, bottom: 14 },
+        stroke: '#2b0301',
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5)
+      .setDepth(4)
+      .setAlpha(0)
+      .setVisible(false)
+      .setInteractive({ useHandCursor: true });
+
+    button.on('pointerdown', () => {
+      SceneTransitionService.start(this, {
+        kind: 'immediate',
+        target: SceneKeys.bossFight,
+      });
+    });
+
+    button.on('pointerover', () => button.setScale(1.04));
+    button.on('pointerout', () => button.setScale(1));
+
+    return button;
+  }
+
+  private revealStartPrompt(): void {
+    if (!this.instructionText || !this.startButton) {
+      return;
+    }
+
+    this.instructionText.setAlpha(0);
+    this.startButton.setAlpha(0).setVisible(true);
+
+    this.tweens.add({
+      targets: [this.instructionText, this.startButton],
+      alpha: 1,
+      duration: 380,
+      ease: 'Cubic.easeOut',
     });
   }
 
@@ -166,6 +219,8 @@ export class RageTransitionScene extends Phaser.Scene {
     this.lineOne?.setPosition(width / 2, height * 0.2).setFixedSize(textWidth, 0).setWordWrapWidth(textWidth);
     this.lineTwo?.setPosition(width / 2, height * 0.28).setFixedSize(textWidth, 0).setWordWrapWidth(textWidth);
     this.impactText?.setPosition(width / 2, height * 0.82).setFixedSize(textWidth, 0).setWordWrapWidth(textWidth);
+    this.instructionText?.setPosition(width / 2, height * 0.9).setFixedSize(textWidth, 0).setWordWrapWidth(textWidth);
+    this.startButton?.setPosition(width / 2, height * 0.72);
   }
 
   private getCoverScale(): number {
@@ -181,5 +236,7 @@ export class RageTransitionScene extends Phaser.Scene {
     this.lineOne = undefined;
     this.lineTwo = undefined;
     this.impactText = undefined;
+    this.instructionText = undefined;
+    this.startButton = undefined;
   }
 }
