@@ -142,6 +142,7 @@ export class BossFightScene extends Phaser.Scene {
   private titleText?: Phaser.GameObjects.Text;
   private bossImage?: Phaser.GameObjects.Image;
   private countdownText?: Phaser.GameObjects.Text;
+  private startOverlay?: Phaser.GameObjects.Container;
   private breakableItems: BreakableItemState[] = [];
   private player: PlayerState = this.createInitialPlayer();
   private boss: BossState = this.createInitialBoss();
@@ -172,6 +173,7 @@ export class BossFightScene extends Phaser.Scene {
   private countdownPulse = 0;
   private countdownFlash = 0;
   private lastCountdownMark: number | null = null;
+  private isAwaitingStart = true;
 
   constructor() {
     super(SceneKeys.bossFight);
@@ -226,6 +228,7 @@ export class BossFightScene extends Phaser.Scene {
     this.countdownPulse = 0;
     this.countdownFlash = 0;
     this.lastCountdownMark = null;
+    this.isAwaitingStart = true;
 
     for (const item of this.breakableItems) {
       item.broken = false;
@@ -256,6 +259,7 @@ export class BossFightScene extends Phaser.Scene {
     this.createHud();
     this.createBigRankDisplay();
     this.createResultOverlay();
+    this.createStartOverlay();
   }
 
   private createOfficeBackground(): void {
@@ -440,6 +444,30 @@ export class BossFightScene extends Phaser.Scene {
     this.root.add(overlay);
   }
 
+
+  private createStartOverlay(): void {
+    if (!this.root) return;
+
+    const overlay = this.add.container(0, 0);
+    const shade = this.add.rectangle(0, 0, PLAY_WIDTH, PLAY_HEIGHT, 0x070710, 0.82).setOrigin(0);
+    const title = this.addText(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 - 96, 'Boss Battle Instructions', 40, '#fff2a8').setOrigin(0.5).setFontStyle('900');
+    title.setStroke('#101820', 8);
+    const instruction = this.addText(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 - 26, 'Charge and punch to launch your boss into furniture.\nBreak more stuff before time runs out to score big.', 24, '#f8fafc').setOrigin(0.5);
+    instruction.setAlign('center');
+    const button = this.add.rectangle(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 + 86, 280, 58, 0xf2c14e).setStrokeStyle(3, 0x101820).setInteractive({ useHandCursor: true });
+    const buttonText = this.addText(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 + 86, 'Yeet your boss', 24, '#101820').setFontStyle('900').setOrigin(0.5);
+
+    button.on('pointerup', () => {
+      this.isAwaitingStart = false;
+      this.startOverlay?.setVisible(false);
+      this.countdownBurst('GO!');
+    });
+
+    overlay.add([shade, title, instruction, button, buttonText]);
+    this.startOverlay = overlay;
+    this.root.add(overlay);
+  }
+
   /* ── input ──────────────────────────────────────────────────── */
 
   private bindInput(): void {
@@ -476,7 +504,7 @@ export class BossFightScene extends Phaser.Scene {
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer): void {
-    if (this.isComplete) return;
+    if (this.isComplete || this.isAwaitingStart) return;
 
     const point = this.toPlayPoint(pointer.x, pointer.y);
     this.mouseX = point.x;
@@ -534,6 +562,10 @@ export class BossFightScene extends Phaser.Scene {
   /* ── simulation ─────────────────────────────────────────────── */
 
   private updateSimulation(dt: number): void {
+    if (this.isAwaitingStart) {
+      return;
+    }
+
     if (this.hitPause > 0) {
       this.hitPause -= dt;
       this.updateFloatingTexts(dt);
@@ -1372,5 +1404,6 @@ export class BossFightScene extends Phaser.Scene {
     this.titleText = undefined;
     this.bossImage = undefined;
     this.countdownText = undefined;
+    this.startOverlay = undefined;
   }
 }
