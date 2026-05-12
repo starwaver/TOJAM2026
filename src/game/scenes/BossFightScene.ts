@@ -452,7 +452,13 @@ export class BossFightScene extends Phaser.Scene {
     const shade = this.add.rectangle(0, 0, PLAY_WIDTH, PLAY_HEIGHT, 0x070710, 0.82).setOrigin(0);
     const title = this.addText(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 - 96, 'Boss Battle Instructions', 40, '#fff2a8').setOrigin(0.5).setFontStyle('900');
     title.setStroke('#101820', 8);
-    const instruction = this.addText(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 - 26, 'Charge and punch to launch your boss into furniture.\nBreak more stuff before time runs out to score big.', 24, '#f8fafc').setOrigin(0.5);
+    const instruction = this.addText(
+      PLAY_WIDTH / 2,
+      PLAY_HEIGHT / 2 - 26,
+      'WASD to move. Click the boss when nearby to punch.\nLaunch your boss into furniture and break more stuff before time runs out.',
+      24,
+      '#f8fafc',
+    ).setOrigin(0.5);
     instruction.setAlign('center');
     const button = this.add.rectangle(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 + 86, 280, 58, 0xf2c14e).setStrokeStyle(3, 0x101820).setInteractive({ useHandCursor: true });
     const buttonText = this.addText(PLAY_WIDTH / 2, PLAY_HEIGHT / 2 + 86, 'Yeet your boss', 24, '#101820').setFontStyle('900').setOrigin(0.5);
